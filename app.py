@@ -1,4 +1,4 @@
-"""GENRE LAB: Интерактивная лаборатория литературных жанров."""
+"""NARRALAB: Платформа интерактивного сторителлинга с использованием ИИ."""
 
 import streamlit as st
 import os
@@ -15,118 +15,510 @@ from narrative.transformations import transform_text
 from narrative.load_balance import validate_text_length, request_with_delay, handle_grok_error, MAX_CHARS
 from narrative.qr_utils import display_qr_code
 
-# Улучшение читаемости текста в мобильном интерфейсе
+# Элегантный минималистичный дизайн
 st.markdown("""
 <style>
-/* Основной текст: делаем его тёмным и контрастным */
-body, .stMarkdown, .stText, .stTextInput, .css-1cpxqw2, .css-ffhzg2 {
-    color: #1a1a1a !important;
-    font-size: 1.05rem !important;
+/* Спокойная цветовая палитра */
+:root {
+    --primary: #4a5568;
+    --primary-light: #718096;
+    --accent: #2d3748;
+    --bg-main: #f7fafc;
+    --bg-card: #ffffff;
+    --text-primary: #2d3748;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border: #e2e8f0;
+    --border-light: #edf2f7;
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* КРИТИЧЕСКИ ВАЖНО: Поля ввода и текстовые области - делаем текст тёмным и контрастным */
+/* Базовые стили */
+* {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+body {
+    background-color: var(--bg-main) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Заголовки - чистые и читаемые */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin-top: 0 !important;
+    margin-bottom: 1rem !important;
+    line-height: 1.3 !important;
+}
+
+h1 {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.75rem !important;
+}
+
+h2 {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+h3 {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Основной текст */
+p, .stMarkdown, .stText {
+    color: var(--text-primary) !important;
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+    margin-bottom: 1rem !important;
+}
+
+/* Поля ввода - чистые и простые */
 textarea, input[type="text"], .stTextArea textarea, .stTextInput input,
 .stTextArea > div > div > textarea, textarea[disabled],
-div[data-baseweb="textarea"] textarea,
-div[data-baseweb="textarea"] textarea[disabled] {
-    color: #000000 !important;
-    background-color: #ffffff !important;
-    font-size: 1.05rem !important;
+div[data-baseweb="textarea"] textarea {
+    color: var(--text-primary) !important;
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    padding: 0.625rem 0.875rem !important;
+    font-size: 0.9375rem !important;
+    line-height: 1.5 !important;
     font-weight: 400 !important;
     opacity: 1 !important;
-    -webkit-text-fill-color: #000000 !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
 }
 
-/* Специально для disabled textarea (результаты генерации) */
+textarea:focus, input[type="text"]:focus {
+    border-color: var(--primary) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1) !important;
+}
+
 textarea[disabled], textarea:disabled {
-    color: #000000 !important;
-    background-color: #f8f9fa !important;
+    background-color: #f7fafc !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-light) !important;
     opacity: 1 !important;
-    -webkit-text-fill-color: #000000 !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
     cursor: text !important;
 }
 
-/* Блоки с результатами генерации и анализа */
-.generated-text, .transformed-text, .analysis-block, .story-node-output, .stCodeBlock {
-    background-color: #ffffff !important;
-    color: #1a1a1a !important;
-    padding: 1.2rem !important;
-    border-radius: 12px !important;
-    border: 1px solid #e0e0e0 !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+/* Карточки - минималистичные */
+.generated-text, .transformed-text, .analysis-block, .story-node-output {
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    padding: 1.5rem !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin: 1rem 0 !important;
 }
 
-/* Усиливаем контрастность текста внутри блоков */
-.generated-text textarea,
-.transformed-text textarea,
-.story-node-output textarea,
-.analysis-block textarea {
-    color: #000000 !important;
-    background-color: #f8f9fa !important;
+/* Кнопки - спокойные и элегантные */
+.stButton > button {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 0.625rem 1.25rem !important;
+    font-weight: 500 !important;
+    font-size: 0.9375rem !important;
+    transition: background-color 0.2s ease !important;
+    box-shadow: none !important;
+}
+
+.stButton > button:hover {
+    background-color: var(--accent) !important;
+    transform: none !important;
+}
+
+.stButton > button[kind="secondary"] {
+    background-color: transparent !important;
+    color: var(--primary) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.stButton > button[kind="secondary"]:hover {
+    background-color: var(--bg-main) !important;
+    border-color: var(--primary) !important;
+}
+
+/* Метрики */
+[data-testid="stMetricValue"] {
+    font-size: 2rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 0.875rem !important;
+    color: var(--text-secondary) !important;
+    font-weight: 400 !important;
+}
+
+[data-testid="stMetricContainer"] {
+    background-color: var(--bg-card) !important;
+    padding: 1rem !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Progress bars */
+.stProgress > div > div > div {
+    background-color: var(--primary) !important;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: var(--bg-card) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+/* Tabs - простые и чистые */
+[data-baseweb="tab-list"] {
+    background: transparent !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+[data-baseweb="tab"] {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    padding: 0.75rem 1rem !important;
+    transition: color 0.2s ease !important;
+}
+
+[data-baseweb="tab"][aria-selected="true"] {
+    color: var(--text-primary) !important;
+    border-bottom: 2px solid var(--primary) !important;
+    font-weight: 600 !important;
+}
+
+/* Info boxes - все типы Streamlit */
+div[data-baseweb="notification"] {
+    border-radius: 6px !important;
+    padding: 1rem !important;
+    border: 1px solid !important;
+}
+
+/* Info (синий) - стандартный стиль Streamlit */
+div[data-baseweb="notification"][data-kind="info"] {
+    background-color: #ebf8ff !important;
+    border-color: #3182ce !important;
+    color: #2c5282 !important;
+}
+
+div[data-baseweb="notification"][data-kind="info"] p,
+div[data-baseweb="notification"][data-kind="info"] div,
+div[data-baseweb="notification"][data-kind="info"] span {
+    color: #2c5282 !important;
     opacity: 1 !important;
-    -webkit-text-fill-color: #000000 !important;
 }
 
-/* Убираем полупрозрачность текста везде */
+/* Success (зеленый) */
+div[data-baseweb="notification"][data-kind="success"] {
+    background-color: #f0fff4 !important;
+    border-color: #38a169 !important;
+    color: #22543d !important;
+}
+
+div[data-baseweb="notification"][data-kind="success"] p,
+div[data-baseweb="notification"][data-kind="success"] div,
+div[data-baseweb="notification"][data-kind="success"] span {
+    color: #22543d !important;
+    opacity: 1 !important;
+}
+
+/* Warning (желтый) */
+div[data-baseweb="notification"][data-kind="warning"] {
+    background-color: #fffaf0 !important;
+    border-color: #d69e2e !important;
+    color: #744210 !important;
+}
+
+div[data-baseweb="notification"][data-kind="warning"] p,
+div[data-baseweb="notification"][data-kind="warning"] div,
+div[data-baseweb="notification"][data-kind="warning"] span {
+    color: #744210 !important;
+    opacity: 1 !important;
+}
+
+/* Error (красный) */
+div[data-baseweb="notification"][data-kind="error"] {
+    background-color: #fff5f5 !important;
+    border-color: #e53e3e !important;
+    color: #742a2a !important;
+}
+
+div[data-baseweb="notification"][data-kind="error"] p,
+div[data-baseweb="notification"][data-kind="error"] div,
+div[data-baseweb="notification"][data-kind="error"] span {
+    color: #742a2a !important;
+    opacity: 1 !important;
+}
+
+/* Альтернативные селекторы для уведомлений */
+.stAlert, .stInfo, .stSuccess, .stWarning, .stError {
+    border-radius: 6px !important;
+    padding: 1rem !important;
+}
+
+.stInfo {
+    background-color: #ebf8ff !important;
+    border-left: 3px solid #3182ce !important;
+    color: #2c5282 !important;
+}
+
+.stSuccess {
+    background-color: #f0fff4 !important;
+    border-left: 3px solid #38a169 !important;
+    color: #22543d !important;
+}
+
+.stWarning {
+    background-color: #fffaf0 !important;
+    border-left: 3px solid #d69e2e !important;
+    color: #744210 !important;
+}
+
+.stError {
+    background-color: #fff5f5 !important;
+    border-left: 3px solid #e53e3e !important;
+    color: #742a2a !important;
+}
+
+/* Улучшаем читаемость текста в уведомлениях */
+.stAlert p, .stAlert div, .stAlert span,
+.stInfo p, .stInfo div, .stInfo span,
+.stSuccess p, .stSuccess div, .stSuccess span,
+.stWarning p, .stWarning div, .stWarning span,
+.stError p, .stError div, .stError span {
+    color: inherit !important;
+    opacity: 1 !important;
+}
+
+/* Selectbox */
+[data-baseweb="select"] {
+    border-radius: 6px !important;
+    border: 1px solid var(--border) !important;
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-baseweb="select"]:focus {
+    border-color: var(--primary) !important;
+}
+
+/* Slider */
+.stSlider > div > div {
+    background-color: var(--primary) !important;
+}
+
+/* Checkbox */
+.stCheckbox label {
+    color: var(--text-primary) !important;
+}
+
+/* File uploader */
+.stFileUploader {
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    background-color: var(--bg-card) !important;
+}
+
+/* Expander */
+[data-baseweb="accordion"] {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+}
+
+[data-baseweb="accordion"] [data-baseweb="accordion-title"] {
+    color: var(--text-primary) !important;
+}
+
+[data-baseweb="accordion"] [data-baseweb="accordion-content"] {
+    color: var(--text-primary) !important;
+}
+
+/* Улучшаем читаемость в expander */
+.stExpander {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.stExpander label {
+    color: var(--text-primary) !important;
+}
+
+.stExpander p, .stExpander div, .stExpander span {
+    color: var(--text-primary) !important;
+    opacity: 1 !important;
+}
+
+/* Spinner */
+.stSpinner > div {
+    border-color: var(--primary) !important;
+    border-top-color: transparent !important;
+}
+
+/* Убираем наложения текста */
 div[data-testid="stMarkdown"] p,
 div[data-testid="stMarkdown"] p *,
 .stMarkdown p,
 .stMarkdown p * {
     opacity: 1 !important;
-    color: #1a1a1a !important;
+    color: var(--text-primary) !important;
+    line-height: 1.6 !important;
+    margin-bottom: 0.75rem !important;
 }
 
-/* Адаптация под смартфоны */
+/* Улучшаем читаемость всех текстовых элементов */
+div[data-testid="stMarkdown"] strong,
+.stMarkdown strong {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+}
+
+div[data-testid="stMarkdown"] code,
+.stMarkdown code {
+    background-color: #f7fafc !important;
+    color: var(--text-primary) !important;
+    padding: 0.125rem 0.375rem !important;
+    border-radius: 3px !important;
+    font-size: 0.875rem !important;
+}
+
+/* Улучшаем списки */
+div[data-testid="stMarkdown"] ul,
+div[data-testid="stMarkdown"] ol,
+.stMarkdown ul,
+.stMarkdown ol {
+    color: var(--text-primary) !important;
+    margin-bottom: 0.75rem !important;
+}
+
+div[data-testid="stMarkdown"] li,
+.stMarkdown li {
+    color: var(--text-primary) !important;
+    line-height: 1.6 !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* Hero секция - минималистичная */
+.hero-section {
+    background-color: var(--bg-card) !important;
+    padding: 2rem !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border) !important;
+    margin-bottom: 2rem !important;
+    text-align: center !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.hero-section h1 {
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    margin-bottom: 0.5rem !important;
+    font-size: 2rem !important;
+}
+
+.hero-section p {
+    color: var(--text-secondary) !important;
+    font-size: 1rem !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+}
+
+/* Дополнительные улучшения для читаемости */
+.stText {
+    color: var(--text-primary) !important;
+}
+
+.stMarkdownContainer {
+    color: var(--text-primary) !important;
+}
+
+/* Улучшаем таблицы */
+.stDataFrame {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+}
+
+/* Улучшаем code blocks */
+.stCodeBlock {
+    background-color: #f7fafc !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    color: var(--text-primary) !important;
+}
+
+/* Улучшаем цитаты */
+blockquote {
+    border-left: 3px solid var(--primary) !important;
+    padding-left: 1rem !important;
+    margin-left: 0 !important;
+    color: var(--text-secondary) !important;
+    font-style: italic !important;
+}
+
+/* Адаптация под мобильные */
 @media (max-width: 600px) {
     body {
-        font-size: 1.12rem !important;
-        line-height: 1.55 !important;
+        font-size: 0.9375rem !important;
     }
 
-    textarea, input[type="text"], .stTextArea textarea {
-        font-size: 1.12rem !important;
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
+    h1 {
+        font-size: 1.75rem !important;
+    }
+
+    h2 {
+        font-size: 1.375rem !important;
     }
 
     .generated-text, .transformed-text, .analysis-block {
-        padding: 1rem !important;
-        margin-bottom: 1rem !important;
+        padding: 1.25rem !important;
     }
-
-    h1, h2, h3 {
-        font-weight: 700 !important;
-        margin-top: 1rem !important;
-        margin-bottom: 0.75rem !important;
+    
+    .hero-section {
+        padding: 1.5rem !important;
     }
 }
-
-
 </style>
 """, unsafe_allow_html=True)
 
 # Настройка страницы
 st.set_page_config(
-    page_title="GENRE LAB - Самаркандский государственный университет",
-    page_icon="📚",
+    page_title="NARRALAB - Платформа интерактивного сторителлинга",
+    page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Заголовок приложения
-st.title("📚 GENRE LAB")
-st.markdown("### Интерактивная лаборатория литературных жанров")
-
-# Информация об университете и разработчике
+# Hero секция
 st.markdown("""
-**GENRE LAB** — это инструмент для изучения литературных жанров через генерацию, 
-анализ и экспериментирование с текстами. Выберите жанр, настройте параметры, 
-создайте текст и проанализируйте его соответствие жанровым нормам.
+<div class="hero-section">
+    <h1>✨ NARRALAB</h1>
+    <p style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #4a5568;">Платформа интерактивного сторителлинга с использованием ИИ</p>
+    <p style="font-size: 0.9375rem; color: #718096; margin: 0;">Создавайте, анализируйте и экспериментируйте с историями нового поколения</p>
+</div>
+""", unsafe_allow_html=True)
 
-**Проект реализован в Самаркандском государственном университете им. Шарофа Рашидова**
-
-**Разработчик:** д.ф.н., профессор Павел Алексеев
-""")
+# Описание платформы
+st.markdown("""
+<div style="text-align: center; margin: 1.5rem 0; padding: 1.25rem; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+    <p style="font-size: 0.9375rem; color: #4a5568; margin: 0; line-height: 1.6;">
+        <strong style="color: #2d3748;">NARRALAB</strong> — это профессиональная платформа для создания интерактивных историй, 
+        анализа литературных жанров и экспериментов с трансмедиальным сторителлингом. 
+        Используйте возможности искусственного интеллекта для генерации, анализа и трансформации текстов.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # Проверка наличия API ключа
 env_path = Path(".env")
@@ -196,7 +588,7 @@ if "transformation_result" not in st.session_state:
 all_genres = get_all_genres()
 
 # ==================== ВКЛАДКИ ====================
-tab1, tab2, tab3 = st.tabs(["Лаборатория жанров", "Анализ моего текста", "Narrative Playground"])
+tab1, tab2, tab3 = st.tabs(["🎨 Генератор историй", "📊 Анализ текста", "🌳 Narrative Playground"])
 
 # ==================== САЙДБАР ====================
 with st.sidebar:
@@ -205,7 +597,7 @@ with st.sidebar:
     # Выбор жанра
     genre_options = {genre.name: genre.id for genre in all_genres}
     selected_genre_name = st.selectbox(
-        "Выберите жанр:",
+        "🎨 Выберите жанр:",
         options=list(genre_options.keys()),
         index=0 if not st.session_state.selected_genre_id else 
               next((i for i, g in enumerate(all_genres) if g.id == st.session_state.selected_genre_id), 0)
@@ -295,9 +687,11 @@ with tab1:
     
     # Блок 1: Описание жанра
     st.header(f"📖 {selected_genre.name}")
-    
-    st.markdown("**Описание жанра:**")
-    st.info(selected_genre.description)
+    st.markdown(f"""
+    <div style='background: #ffffff; padding: 1.5rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;'>
+        <p style='font-size: 0.9375rem; color: #4a5568; margin: 0; line-height: 1.6;'>{selected_genre.description}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
@@ -315,17 +709,16 @@ with tab1:
     
     # Блок 2: Профиль жанра (радар)
     st.header("📊 Профиль жанра")
-
     st.markdown("""
     Радарная диаграмма показывает характерные особенности жанра по следующим осям:
-- **Сюжетность**: насколько развит сюжет
-- **Описательность**: уровень детализации
-- **Конфликтность**: выраженность конфликта
-- **Лиричность**: эмоциональность и лирические отступления
-- **Условность**: степень условности/фантастичности
-- **Нравственная окраска**: выраженность моральной позиции
-- **Социальность**: социальный контекст
-""")
+    - **Сюжетность**: насколько развит сюжет
+    - **Описательность**: уровень детализации
+    - **Конфликтность**: выраженность конфликта
+    - **Лиричность**: эмоциональность и лирические отступления
+    - **Условность**: степень условности/фантастичности
+    - **Нравственная окраска**: выраженность моральной позиции
+    - **Социальность**: социальный контекст
+    """)
     
     radar_fig = build_radar_chart(selected_genre.radar_profile)
     st.plotly_chart(radar_fig, use_container_width=True)
@@ -334,7 +727,6 @@ with tab1:
 
     # Блок 3: Генерация текста
     st.header("✍️ Генерация текста")
-    
     st.info("💡 Текст генерируется в завершённом виде. Если модель попытается обрезать текст — система автоматически завершит его до логического окончания.")
     
     if st.button("🔄 Сгенерировать текст", type="primary", use_container_width=True):
@@ -608,7 +1000,6 @@ with tab1:
             
             # Блок 5: Режим "Сломать жанр"
             st.header("🔨 Режим «Сломать жанр»")
-            
             st.markdown("""
             Этот режим создаёт модифицированную версию текста, которая **осознанно нарушает** 
             жанровые нормы, но сохраняет узнаваемые элементы жанра. Это помогает понять границы жанра 
@@ -1299,12 +1690,10 @@ with tab3:
 st.markdown("---")
 st.markdown(
     """
-    <div style='text-align: center; color: gray; padding: 20px;'>
-    <p><strong>GENRE LAB</strong> — Интерактивная лаборатория литературных жанров</p>
-    <p style='font-size: 0.9em; margin-top: 10px;'>
-    Самаркандский государственный университет им. Шарофа Рашидова<br>
-    Разработчик: д.ф.н., профессор Павел Алексеев
-    </p>
+    <div style='text-align: center; color: #718096; padding: 2rem; margin-top: 2rem;'>
+    <p style='font-size: 1rem; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;'><strong>✨ NARRALAB</strong></p>
+    <p style='font-size: 0.875rem; color: #718096; margin: 0;'>Платформа интерактивного сторителлинга с использованием ИИ</p>
+    <p style='font-size: 0.75rem; color: #a0aec0; margin-top: 0.75rem;'>© 2026 NARRALAB. Все права защищены.</p>
     </div>
     """,
     unsafe_allow_html=True
