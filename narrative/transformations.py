@@ -28,6 +28,8 @@ def load_transform_prompt() -> str:
 def transform_text(
     text: str,
     target_format: str,
+    genre: Optional[str] = None,
+    tonality: Optional[str] = None,
     model: str = DEFAULT_MODEL
 ) -> Dict:
     """
@@ -37,6 +39,8 @@ def transform_text(
         text: Исходный текст для преобразования
         target_format: Целевой формат (пьеса, сценарий, подкаст, комикс, визуальный роман, 
                       игровая сцена, дневниковая запись, соцсетевой пост, поэтическая версия)
+        genre: Жанр из панели настроек (опционально), чтобы сохранять жанровую окраску
+        tonality: Тональность из панели настроек (опционально)
         model: Модель для генерации (по умолчанию deepseek-chat)
         
     Returns:
@@ -52,6 +56,15 @@ def transform_text(
         raise ValueError(error_msg)
     
     system_prompt = load_transform_prompt()
+    
+    style_context = ""
+    if genre or tonality:
+        parts = []
+        if genre:
+            parts.append(f"Жанр: {genre}")
+        if tonality:
+            parts.append(f"Тональность: {tonality}")
+        style_context = f"\nСохраняй при преобразовании: {', '.join(parts)}.\n\n"
     
     format_descriptions = {
         "пьеса": "Пьеса: диалоги, ремарки, списки персонажей, акты и сцены",
@@ -70,8 +83,7 @@ def transform_text(
     user_prompt = f"""Преобразуй следующий текст в формат: {target_format}
 
 {format_desc}
-
-Исходный текст:
+{style_context}Исходный текст:
 
 {text}
 

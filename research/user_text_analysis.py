@@ -1,19 +1,20 @@
 """Модуль для анализа пользовательского текста."""
 
 import json
-from typing import Dict, List
+from typing import Dict, List, Optional
 from genres.schema import Genre
 from services.grok_client import call_grok_chat, DEFAULT_MODEL
 from utils import extract_json_object, load_prompt
 
 
-def build_user_analysis_prompt(text: str, genres: List[Genre]) -> str:
+def build_user_analysis_prompt(text: str, genres: List[Genre], expected_genre_name: Optional[str] = None) -> str:
     """
     Формирует промпт для анализа пользовательского текста.
     
     Args:
         text: Текст для анализа
         genres: Список жанров из проекта
+        expected_genre_name: Ожидаемый жанр из панели настроек (для контекста сравнения)
         
     Returns:
         str: Сформированный промпт
@@ -28,9 +29,12 @@ def build_user_analysis_prompt(text: str, genres: List[Genre]) -> str:
     
     genres_text = "\n".join(genres_list)
     
+    genre_context = ""
+    if expected_genre_name:
+        genre_context = f"\nКОНТЕКСТ: Пользователь выбрал в настройках жанр «{expected_genre_name}». В объяснении жанровой принадлежности укажи, насколько текст соответствует этому жанру или отклоняется от него.\n\n"
+    
     prompt = f"""Проанализируй следующий текст по всем литературоведческим аспектам.
-
-ДОСТУПНЫЕ ЖАНРЫ ПРОЕКТА:
+{genre_context}ДОСТУПНЫЕ ЖАНРЫ ПРОЕКТА:
 {genres_text}
 
 ТЕКСТ ДЛЯ АНАЛИЗА:
@@ -99,13 +103,14 @@ def build_user_analysis_prompt(text: str, genres: List[Genre]) -> str:
     return prompt
 
 
-def analyze_user_text(text: str, genres: List[Genre]) -> Dict:
+def analyze_user_text(text: str, genres: List[Genre], expected_genre_name: Optional[str] = None) -> Dict:
     """
     Анализирует пользовательский текст с помощью LLM API.
     
     Args:
         text: Текст для анализа
         genres: Список жанров из проекта
+        expected_genre_name: Ожидаемый жанр из панели настроек (опционально)
         
     Returns:
         Dict: Словарь с результатами анализа
@@ -118,7 +123,7 @@ def analyze_user_text(text: str, genres: List[Genre]) -> Dict:
     )
     
     # Формируем user_prompt
-    user_prompt = build_user_analysis_prompt(text, genres)
+    user_prompt = build_user_analysis_prompt(text, genres, expected_genre_name=expected_genre_name)
     
     try:
         # Вызываем LLM API

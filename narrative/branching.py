@@ -29,6 +29,9 @@ def generate_branch(
     initial_scene: str,
     choice: str,
     previous_branches: Optional[List[Dict]] = None,
+    genre: Optional[str] = None,
+    tonality: Optional[str] = None,
+    setting: Optional[str] = None,
     model: str = DEFAULT_MODEL
 ) -> Dict:
     """
@@ -38,6 +41,9 @@ def generate_branch(
         initial_scene: Начальная сцена или текущее состояние истории
         choice: Вариант выбора, который приводит к ветвлению
         previous_branches: Предыдущие ветвления (для контекста)
+        genre: Жанр (из панели настроек), чтобы сохранять стиль
+        tonality: Тональность (из панели настроек)
+        setting: Сеттинг/эпоха (из панели настроек)
         model: Модель для генерации (по умолчанию deepseek-chat)
         
     Returns:
@@ -55,7 +61,18 @@ def generate_branch(
         for i, branch in enumerate(previous_branches[-3:], 1):  # Берём последние 3 ветвления
             context_text += f"{i}. {branch.get('choice', '')} -> {branch.get('branch_text', '')[:100]}...\n"
     
-    user_prompt = f"""Вот начальная сцена или текущее состояние истории:
+    genre_context = ""
+    if genre or tonality or setting:
+        parts = []
+        if genre:
+            parts.append(f"Жанр: {genre}")
+        if tonality:
+            parts.append(f"Тональность: {tonality}")
+        if setting:
+            parts.append(f"Сеттинг/эпоха: {setting}")
+        genre_context = "\nКонтекст из настроек (сохраняй при продолжении): " + "; ".join(parts) + "\n\n"
+    
+    user_prompt = f"""{genre_context}Вот начальная сцена или текущее состояние истории:
 
 {initial_scene}
 

@@ -1232,6 +1232,7 @@ with tab2:
     st.markdown("""
     Загрузите файл **.txt** или вставьте отрывок — получите разбор: жанр, структура, тип повествователя, фокализация и стиль с цитатами из текста.
     """)
+    st.caption("💡 Жанр, выбранный в панели настроек слева, используется как контекст: в объяснении будет учтено соответствие текста этому жанру.")
     
     with st.form("user_text_form"):
         uploaded_file = st.file_uploader(
@@ -1270,7 +1271,9 @@ with tab2:
         else:
             with st.spinner("Анализирую текст..."):
                 try:
-                    analysis = analyze_user_text(user_text, all_genres)
+                    # Учитываем выбранный в настройках жанр как контекст для анализа
+                    _expected_genre = get_genre_by_id(st.session_state.selected_genre_id) if st.session_state.get("selected_genre_id") else None
+                    analysis = analyze_user_text(user_text, all_genres, expected_genre_name=_expected_genre.name if _expected_genre else None)
                     st.session_state.user_text_analysis = analysis
                     st.success("Анализ завершён!")
                 except ValueError as e:
@@ -1482,6 +1485,10 @@ with tab3:
     Выберите тип структуры, количество узлов и параметры жанра.
     """)
     
+    # Значения по умолчанию из панели настроек (жанр и сеттинг)
+    _default_genre_index = next((i for i, g in enumerate(all_genres) if g.id == st.session_state.get("selected_genre_id")), 0)
+    _default_era = (st.session_state.params.setting if st.session_state.get("params") else None) or "современность"
+    
     with st.form("plot_builder_form"):
         plot_col1, plot_col2 = st.columns(2)
         
@@ -1503,8 +1510,9 @@ with tab3:
             genre_name_plot = st.selectbox(
                 "Жанр:",
                 [genre.name for genre in all_genres],
+                index=_default_genre_index,
                 key="plot_genre",
-                help="Выберите жанр для сюжета"
+                help="Выберите жанр для сюжета (по умолчанию — из панели настроек)"
             )
         
         with plot_col2:
@@ -1516,8 +1524,8 @@ with tab3:
             
             era_plot = st.text_input(
                 "Эпоха:",
-                value="современность",
-                help="Эпоха, в которой происходит действие"
+                value=_default_era,
+                help="Эпоха, в которой происходит действие (по умолчанию — из панели настроек)"
             )
         
         plot_submitted = st.form_submit_button("🔄 Сгенерировать сюжетную структуру")
@@ -1679,11 +1687,17 @@ with tab3:
         else:
             with st.spinner("Генерирую ветвление..."):
                 try:
+                    # Учитываем жанр и параметры из панели настроек
+                    _genre_obj = get_genre_by_id(st.session_state.selected_genre_id) if st.session_state.get("selected_genre_id") else None
+                    _params = st.session_state.get("params")
                     branch = request_with_delay(
                         generate_branch,
                         initial_scene=initial_scene,
                         choice=choice,
-                        previous_branches=st.session_state.branching_history
+                        previous_branches=st.session_state.branching_history,
+                        genre=_genre_obj.name if _genre_obj else None,
+                        tonality=_params.tonality if _params else None,
+                        setting=_params.setting if _params else None,
                     )
                     
                     # Добавляем выбор в ветвление для истории
@@ -1822,10 +1836,14 @@ with tab3:
             else:
                 with st.spinner("Преобразую текст..."):
                     try:
+                        _t_genre = get_genre_by_id(st.session_state.selected_genre_id) if st.session_state.get("selected_genre_id") else None
+                        _t_params = st.session_state.get("params")
                         transformation = request_with_delay(
                             transform_text,
                             text=transform_text_input,
-                            target_format=target_format
+                            target_format=target_format,
+                            genre=_t_genre.name if _t_genre else None,
+                            tonality=_t_params.tonality if _t_params else None,
                         )
                         
                         st.session_state.transformation_result = transformation
