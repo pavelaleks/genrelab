@@ -689,6 +689,15 @@ trim_list_state("branching_history", max_items=20)
 # Получаем список жанров
 all_genres = get_all_genres()
 
+# Кнопка «Выйти» справа вверху (до вкладок), чтобы всегда была вверху страницы
+if AUTH_REQUIRED:
+    _col_spacer, _col_exit = st.columns([5, 1])
+    with _col_exit:
+        if st.button("🚪 Выйти", use_container_width=True, key="exit_button_main"):
+            st.session_state.authenticated = False
+            st.rerun()
+    st.markdown("")  # небольшой отступ под кнопкой
+
 # ==================== ВКЛАДКИ ====================
 tab_help, tab1, tab2, tab3 = st.tabs([
     "📖 Как пользоваться",
@@ -696,14 +705,6 @@ tab_help, tab1, tab2, tab3 = st.tabs([
     "📊 Анализ текста",
     "🌳 Narrative Playground"
 ])
-
-# Кнопка «Выйти» справа вверху (не в сайдбаре), чтобы в сайдбаре можно было скрыть keyboard_double
-if AUTH_REQUIRED:
-    _col_spacer, _col_exit = st.columns([5, 1])
-    with _col_exit:
-        if st.button("🚪 Выйти", use_container_width=True, key="exit_button_main"):
-            st.session_state.authenticated = False
-            st.rerun()
 
 # ==================== САЙДБАР ====================
 with st.sidebar:
