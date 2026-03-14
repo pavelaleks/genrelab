@@ -254,13 +254,17 @@ textarea[disabled], textarea:disabled {
     background-color: var(--primary) !important;
 }
 
-/* Sidebar — слегка серый фон, чтобы отбить от основной страницы */
+/* Sidebar — слегка серый фон; скрываем полностью на вкладке «Нарративная песочница» */
 [data-testid="stSidebar"] {
     background-color: #f3f4f6 !important;
     border-right: 1px solid var(--border) !important;
 }
 [data-testid="stSidebar"] > div {
     background-color: #f3f4f6 !important;
+}
+/* Когда на странице есть маркер вкладки Песочница — скрываем сайдбар (set_page_config не всегда срабатывает при смене вкладки) */
+body:has(#playground-tab-active) [data-testid="stSidebar"] {
+    display: none !important;
 }
 
 /* Tabs - простые и чистые */
@@ -711,6 +715,10 @@ _st = st.radio(
 if st.session_state.get("prev_tab", _st) != _st:
     st.session_state.prev_tab = _st
     st.rerun()
+
+# Маркер для CSS: скрывать сайдбар на вкладке Песочница (set_page_config при смене вкладки не срабатывает)
+if st.session_state.current_tab == "playground":
+    st.markdown('<div id="playground-tab-active" style="display:none" aria-hidden="true"></div>', unsafe_allow_html=True)
 
 # ==================== САЙДБАР ====================
 with st.sidebar:
