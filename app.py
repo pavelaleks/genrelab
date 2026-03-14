@@ -21,7 +21,6 @@ from utils import init_session_state, load_prompt, trim_list_state
 from ai_engine import generate_text, stream_text
 from ui_components import (
     render_hero,
-    render_platform_description,
     render_api_setup_help,
     render_api_key_error_block,
 )
@@ -644,9 +643,8 @@ blockquote {
 </style>
 """, unsafe_allow_html=True)
 
-# Hero и описание
+# Hero — один блок с названием, описанием и лозунгом
 render_hero()
-render_platform_description()
 
 # Проверка наличия API ключа
 env_path = Path(".env")

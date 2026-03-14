@@ -6,26 +6,16 @@ import streamlit as st
 
 
 def render_hero() -> None:
+    """Один блок: название, описание и лозунг."""
     st.markdown(
         """
-<div class="hero-section">
-    <h1>✨ NARRALAB</h1>
-    <p style="font-size: 1.2rem; margin-bottom: 0.5rem; color: #374151;">Платформа интерактивного сторителлинга с использованием ИИ</p>
-    <p style="font-size: 1.05rem; color: #6b7280; margin: 0;">Создавайте, анализируйте и экспериментируйте с историями нового поколения</p>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def render_platform_description() -> None:
-    st.markdown(
-        """
-<div style="text-align: center; margin: 1.5rem 0; padding: 1.25rem; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
-    <p style="font-size: 1.0625rem; color: #374151; margin: 0; line-height: 1.65;">
-        <strong style="color: #111827;">NARRALAB</strong> — профессиональная платформа для создания интерактивных историй,
-        анализа литературных жанров и экспериментов с трансмедиальным сторителлингом.
-        Используйте ИИ для генерации, анализа и трансформации текстов.
+<div class="hero-section" style="padding: 1.5rem; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+    <h1 style="text-align: center; margin-bottom: 0.75rem;">✨ NARRALAB</h1>
+    <p style="font-size: 1.0625rem; color: #374151; margin: 0 0 1rem 0; line-height: 1.65; text-align: center;">
+        Профессиональная платформа для создания интерактивных историй, анализа литературных жанров и экспериментов с трансмедиальным сторителлингом. Используйте ИИ для генерации, анализа и трансформации текстов.
+    </p>
+    <p style="font-size: 1.35rem; color: #111827; font-weight: 600; margin: 0; text-align: center; line-height: 1.4;">
+        Создавайте, анализируйте и экспериментируйте с историями нового поколения
     </p>
 </div>
         """,
