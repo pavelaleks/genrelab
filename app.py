@@ -476,22 +476,7 @@ div[data-baseweb="notification"][data-kind="error"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
-/* Скрываем блок с keyboard_double. Вариант A: первый дочерний элемент внутри первого div */
-[data-testid="stSidebar"] > div:first-child > button,
-[data-testid="stSidebar"] > div:first-child > button *,
-[data-testid="stSidebar"] > div:first-child > *:first-child,
-[data-testid="stSidebar"] > div:first-child > *:first-child * {
-    font-size: 0 !important;
-    line-height: 0 !important;
-    color: transparent !important;
-}
-/* Вариант B: если у сайдбара два прямых потомка — первый полоска сворачивания, второй контент; скрываем только первый */
-section[data-testid="stSidebar"] > *:first-child:not(:last-child),
-section[data-testid="stSidebar"] > *:first-child:not(:last-child) * {
-    font-size: 0 !important;
-    line-height: 0 !important;
-    color: transparent !important;
-}
+/* Не скрываем по first-child в сайдбаре — на Cloud это скрывает весь контент (Выйти, Настройки, подписи). Оставляем только скрытие по aria-label/title (keyboard) выше. */
 /* Блок иконки в заголовке expander — скрываем, чтобы не показывался текст _arrow_right */
 [data-baseweb="accordion-header"] > div:last-of-type,
 [data-baseweb="accordion-header"] > div:last-child,
