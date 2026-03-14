@@ -1516,22 +1516,36 @@ elif st.session_state.current_tab == "playground":
     
     # Секция 1: Конструктор сюжета (Plot Builder)
     st.subheader("🏗️ Конструктор сюжета (Plot Builder)")
-    st.info("💡 **Для сценаристов:** Узлы — это сцены или ключевые точки. Линейная структура подходит для классического акта; branching — для интерактива и «точки выбора»; Rashomon — для нескольких версий одного события.")
+    st.info("💡 **Для сценаристов:** Узлы — это сцены или ключевые точки. Выберите тип структуры под задачу; пояснения — в раскрывающемся списке ниже.")
     st.markdown("""
     Создайте структурированную сюжетную схему с узлами и связями. 
     Выберите тип структуры, количество узлов и параметры жанра.
     """)
+    
+    # Типы структуры: русские названия для UI, английские — для API
+    STRUCTURE_OPTIONS = [
+        ("linear", "Линейная", "События в хронологическом порядке, классическая драматургия (завязка — развитие — развязка)."),
+        ("branching", "Ветвящаяся", "Несколько путей развития, точки выбора героя; подходит для интерактива и игровых сценариев."),
+        ("circular", "Кольцевая", "Сюжет возвращается к началу, цикл; конец перекликается с началом."),
+        ("mosaic", "Мозаичная", "Фрагменты и сцены в нелинейном порядке; общая картина складывается из кусочков."),
+        ("Rashomon", "Рашомон", "Одно и то же событие показано с разных точек зрения персонажей; различающиеся версии."),
+        ("split-perspective", "Раздельная перспектива", "Параллельные сюжетные линии или переключение между героями/временами."),
+        ("epistolary", "Эпистолярная", "Структура из писем, дневников, документов; повествование через «документы»."),
+    ]
+    structure_labels = [opt[1] for opt in STRUCTURE_OPTIONS]
+    structure_value_by_label = {opt[1]: opt[0] for opt in STRUCTURE_OPTIONS}
     
     # Свои настройки песочницы — нейтральные по умолчанию (не из сайдбара)
     with st.form("plot_builder_form"):
         plot_col1, plot_col2 = st.columns(2)
         
         with plot_col1:
-            structure_type = st.selectbox(
+            structure_label = st.selectbox(
                 "Тип структуры:",
-                ["linear", "branching", "circular", "mosaic", "Rashomon", "split-perspective", "epistolary"],
+                options=structure_labels,
                 help="Выберите тип сюжетной структуры"
             )
+            structure_type = structure_value_by_label[structure_label]
             
             num_nodes = st.slider(
                 "Количество узлов:",
@@ -1562,6 +1576,17 @@ elif st.session_state.current_tab == "playground":
             )
         
         plot_submitted = st.form_submit_button("🔄 Сгенерировать сюжетную структуру")
+    
+    # Пояснения к типам структуры (открывающийся список)
+    structure_details_items = "".join(
+        f'<li><strong>{opt[1]}</strong> — {opt[2]}</li>' for opt in STRUCTURE_OPTIONS
+    )
+    st.markdown(f"""
+    <details style="margin-top:0.75rem; margin-bottom:1rem;">
+        <summary style="cursor:pointer; font-weight:600;">Что означают типы структуры?</summary>
+        <ul style="margin-top:0.5rem; padding-left:1.5rem;">{structure_details_items}</ul>
+    </details>
+    """, unsafe_allow_html=True)
     
     if plot_submitted:
         with st.spinner("Генерирую сюжетную структуру..."):
