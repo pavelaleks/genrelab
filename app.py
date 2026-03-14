@@ -475,7 +475,9 @@ div[data-baseweb="notification"][data-kind="error"] span {
     color: transparent !important;
 }
 /* Блок иконки в заголовке expander — скрываем, чтобы не показывался текст _arrow_right */
-[data-baseweb="accordion-header"] > div:last-of-type {
+[data-baseweb="accordion-header"] > div:last-of-type,
+[data-baseweb="accordion-header"] > div:last-child,
+.stExpander > div:first-child > div:last-child {
     font-size: 0 !important;
     line-height: 0 !important;
     visibility: hidden !important;
@@ -484,6 +486,10 @@ div[data-baseweb="notification"][data-kind="error"] span {
     overflow: hidden !important;
     padding: 0 !important;
     margin: 0 !important;
+}
+/* Скрываем любой элемент с текстом expand/collapse в expander (запасной вариант для Cloud) */
+.stExpander [data-testid="stExpanderExpandIcon"] {
+    display: none !important;
 }
 
 .stExpander label {
@@ -885,16 +891,20 @@ with tab1:
     
     # Блок 2: Профиль жанра (радар)
     st.header("📊 Профиль жанра")
-    with st.expander("Что означают оси радара", expanded=False):
-        st.markdown("""
-        - **Сюжетность** — насколько развит сюжет  
-        - **Описательность** — уровень детализации  
-        - **Конфликтность** — выраженность конфликта  
-        - **Лиричность** — эмоциональность и отступления  
-        - **Условность** — степень условности/фантастичности  
-        - **Нравственная окраска** — моральная позиция  
-        - **Социальность** — социальный контекст
-        """)
+    st.markdown("""
+    <details style="margin-bottom:1rem;">
+        <summary style="cursor:pointer; font-weight:600;">Что означают оси радара</summary>
+        <ul style="margin-top:0.5rem; padding-left:1.5rem;">
+            <li><strong>Сюжетность</strong> — насколько развит сюжет</li>
+            <li><strong>Описательность</strong> — уровень детализации</li>
+            <li><strong>Конфликтность</strong> — выраженность конфликта</li>
+            <li><strong>Лиричность</strong> — эмоциональность и отступления</li>
+            <li><strong>Условность</strong> — степень условности/фантастичности</li>
+            <li><strong>Нравственная окраска</strong> — моральная позиция</li>
+            <li><strong>Социальность</strong> — социальный контекст</li>
+        </ul>
+    </details>
+    """, unsafe_allow_html=True)
     
     radar_fig = build_radar_chart(selected_genre.radar_profile)
     st.plotly_chart(radar_fig, use_container_width=True)
@@ -977,16 +987,19 @@ with tab1:
                 error_str = str(e)
                 if "401" in error_str or "авторизации" in error_str.lower():
                     st.error(error_str)
-                    with st.expander("🔧 Как исправить"):
-                        st.markdown("""
-                        **Проверьте:**
-                        1. Файл `.env` существует в корне проекта
-                        2. В `.env` есть строка `DEEPSEEK_API_KEY=...` (или `GROK_API_KEY=...`)
-                        3. API ключ скопирован полностью, без лишних символов
-                        4. Ключ активен у выбранного провайдера
-                        
-                        **После исправления перезапустите приложение!**
-                        """)
+                    st.markdown("""
+                    <details open style="margin-bottom:1rem;">
+                        <summary style="cursor:pointer; font-weight:600;">🔧 Как исправить</summary>
+                        <p style="margin-top:0.5rem;"><strong>Проверьте:</strong></p>
+                        <ol style="margin:0.25rem 0 0 1.25rem; padding:0;">
+                            <li>Файл <code>.env</code> существует в корне проекта</li>
+                            <li>В <code>.env</code> есть строка <code>DEEPSEEK_API_KEY=...</code> (или <code>GROK_API_KEY=...</code>)</li>
+                            <li>API ключ скопирован полностью, без лишних символов</li>
+                            <li>Ключ активен у выбранного провайдера</li>
+                        </ol>
+                        <p style="margin-top:0.5rem;"><strong>После исправления перезапустите приложение!</strong></p>
+                    </details>
+                    """, unsafe_allow_html=True)
                 else:
                     st.error(f"Ошибка при генерации текста: {error_str}")
             except Exception as e:
@@ -1047,15 +1060,18 @@ with tab1:
                     error_str = str(e)
                     if "401" in error_str or "авторизации" in error_str.lower():
                         st.error(error_str)
-                        with st.expander("🔧 Как исправить"):
-                            st.markdown("""
-                            **Проверьте:**
-                            1. Файл `.env` существует и содержит `DEEPSEEK_API_KEY=...` (или `GROK_API_KEY=...`)
-                            2. API ключ скопирован полностью, без лишних символов
-                            3. API ключ активен у выбранного провайдера
-                            
-                            **После исправления перезапустите приложение!**
-                            """)
+                        st.markdown("""
+                        <details open style="margin-bottom:1rem;">
+                            <summary style="cursor:pointer; font-weight:600;">🔧 Как исправить</summary>
+                            <p style="margin-top:0.5rem;"><strong>Проверьте:</strong></p>
+                            <ol style="margin:0.25rem 0 0 1.25rem; padding:0;">
+                                <li>Файл <code>.env</code> существует и содержит <code>DEEPSEEK_API_KEY=...</code> (или <code>GROK_API_KEY=...</code>)</li>
+                                <li>API ключ скопирован полностью, без лишних символов</li>
+                                <li>API ключ активен у выбранного провайдера</li>
+                            </ol>
+                            <p style="margin-top:0.5rem;"><strong>После исправления перезапустите приложение!</strong></p>
+                        </details>
+                        """, unsafe_allow_html=True)
                     else:
                         st.error(f"Ошибка при анализе текста: {error_str}")
                 except Exception as e:
@@ -1407,16 +1423,24 @@ with tab2:
         
         evidence = analysis.get("evidence", [])
         if evidence:
+            parts = []
             for item in evidence:
                 aspect = item.get("aspect", "")
                 quote = item.get("quote", "")
                 explanation = item.get("explanation", "")
-                
                 if quote and explanation:
-                    with st.expander(f"🔖 {aspect.capitalize()}"):
-                        st.markdown(f"**Цитата:**")
-                        st.markdown(f"> {quote}")
-                        st.markdown(f"**Объяснение:** {explanation}")
+                    q_esc = quote.replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+                    ex_esc = explanation.replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+                    parts.append(f"""
+                    <details style="margin-bottom:0.75rem;">
+                        <summary style="cursor:pointer; font-weight:600;">🔖 {aspect.capitalize()}</summary>
+                        <p style="margin-top:0.5rem;"><strong>Цитата:</strong></p>
+                        <blockquote style="margin:0.25rem 0; padding-left:1rem; border-left:3px solid #e2e8f0;">{q_esc}</blockquote>
+                        <p style="margin-top:0.5rem;"><strong>Объяснение:</strong> {ex_esc}</p>
+                    </details>
+                    """)
+            if parts:
+                st.markdown("<div>" + "".join(parts) + "</div>", unsafe_allow_html=True)
         else:
             st.info("Цитаты-доказательства не предоставлены.")
         
@@ -1598,15 +1622,18 @@ with tab3:
     # Секция 2: Ветвящиеся истории (Branching Narrative Lab)
     st.subheader("🌳 Ветвящиеся истории (Branching Narrative Lab)")
     
-    with st.expander("📖 Как использовать в writers' room", expanded=True):
-        st.markdown("""
-        **Ветвления полезны, когда нужно:**
-        - Продумать **точки выбора** героя (моральная дилемма, поворот сюжета, точка невозврата).
-        - Сравнить **альтернативные развития** одной сцены и увидеть, как меняются жанр, тон и напряжение.
-        - Подготовить **интерактивный сценарий** или черновик для игр/выборных историй.
-        
-        **Совет:** Задавайте начальную сцену чётко (место, персонажи, конфликт). Вариант выбора формулируйте как действие или решение героя — так модель лучше строит продолжение.
-        """)
+    st.markdown("""
+    <details open style="margin-bottom:1rem;">
+        <summary style="cursor:pointer; font-weight:600;">📖 Как использовать в writers' room</summary>
+        <p style="margin-top:0.5rem;"><strong>Ветвления полезны, когда нужно:</strong></p>
+        <ul style="margin:0.25rem 0 0 1.25rem; padding:0;">
+            <li>Продумать <strong>точки выбора</strong> героя (моральная дилемма, поворот сюжета, точка невозврата).</li>
+            <li>Сравнить <strong>альтернативные развития</strong> одной сцены и увидеть, как меняются жанр, тон и напряжение.</li>
+            <li>Подготовить <strong>интерактивный сценарий</strong> или черновик для игр/выборных историй.</li>
+        </ul>
+        <p style="margin-top:0.5rem;"><strong>Совет:</strong> Задавайте начальную сцену чётко (место, персонажи, конфликт). Вариант выбора формулируйте как действие или решение героя — так модель лучше строит продолжение.</p>
+    </details>
+    """, unsafe_allow_html=True)
     
     st.caption("Опишите сцену и выбор героя — система сгенерирует альтернативное продолжение и покажет, как меняются жанр, фокализация, стиль и напряжение.")
     

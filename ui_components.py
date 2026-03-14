@@ -33,43 +33,47 @@ def render_platform_description() -> None:
     )
 
 
+def _html_esc(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
 def render_api_setup_help(active_provider: str, api_key_hints: str) -> None:
     st.warning("⚠️ **API ключ не найден!**")
-    with st.expander("📋 Как настроить API ключ", expanded=True):
-        st.markdown(
-            f"""
-Для работы приложения необходим API ключ LLM-провайдера.
-По умолчанию используется **DeepSeek**.
-
-1. Создайте файл `.env` в корне проекта  
-2. Добавьте строку: `DEEPSEEK_API_KEY=your_actual_deepseek_api_key_here`
-3. Получите ключ:
-   - DeepSeek: [platform.deepseek.com](https://platform.deepseek.com/api_keys)
-   - Grok: [console.x.ai](https://console.x.ai)
-4. Перезапустите приложение
-
-Поддерживаются ключи: `{api_key_hints}`  
-Текущий провайдер: `{active_provider}`
-            """
-        )
+    hints_esc = _html_esc(api_key_hints)
+    prov_esc = _html_esc(active_provider)
+    st.markdown(
+        f"""
+        <details open style="margin-bottom:1rem;">
+            <summary style="cursor:pointer; font-weight:600;">📋 Как настроить API ключ</summary>
+            <div style="margin-top:0.75rem; padding-left:0.5rem;">
+                <p>Для работы приложения необходим API ключ LLM-провайдера. По умолчанию используется <strong>DeepSeek</strong>.</p>
+                <ol style="margin:0.25rem 0 0 1.25rem; padding:0;">
+                    <li>Создайте файл <code>.env</code> в корне проекта</li>
+                    <li>Добавьте строку: <code>DEEPSEEK_API_KEY=your_actual_deepseek_api_key_here</code></li>
+                    <li>Получите ключ: <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek</a>, <a href="https://console.x.ai" target="_blank">Grok</a></li>
+                    <li>Перезапустите приложение</li>
+                </ol>
+                <p style="margin-top:0.5rem;">Поддерживаются ключи: <code>{hints_esc}</code>. Текущий провайдер: <code>{prov_esc}</code></p>
+            </div>
+        </details>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_api_key_error_block() -> None:
     """Компактный переиспользуемый блок-инструкция при ошибке ключа."""
-    with st.expander("📋 Инструкция по настройке API ключа"):
-        st.markdown(
-            """
-**Шаг 1:** Создайте файл `.env` в корне проекта (если его нет)
-
-**Шаг 2:** Добавьте строку:
-```env
-DEEPSEEK_API_KEY=your_actual_deepseek_api_key_here
-```
-
-**Шаг 3:** Получите ключ:
-- DeepSeek: https://platform.deepseek.com/api_keys
-- Grok: https://console.x.ai
-
-**Шаг 4:** Перезапустите приложение после изменения `.env`
-"""
-        )
+    st.markdown(
+        """
+        <details style="margin-bottom:1rem;">
+            <summary style="cursor:pointer; font-weight:600;">📋 Инструкция по настройке API ключа</summary>
+            <div style="margin-top:0.75rem; padding-left:0.5rem;">
+                <p><strong>Шаг 1:</strong> Создайте файл <code>.env</code> в корне проекта (если его нет).</p>
+                <p><strong>Шаг 2:</strong> Добавьте строку: <code>DEEPSEEK_API_KEY=your_actual_deepseek_api_key_here</code></p>
+                <p><strong>Шаг 3:</strong> Получите ключ: <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek</a>, <a href="https://console.x.ai" target="_blank">Grok</a></p>
+                <p><strong>Шаг 4:</strong> Перезапустите приложение после изменения <code>.env</code></p>
+            </div>
+        </details>
+        """,
+        unsafe_allow_html=True,
+    )
