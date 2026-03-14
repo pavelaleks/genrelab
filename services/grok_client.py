@@ -1,36 +1,66 @@
-"""Клиент для работы с Grok API."""
+"""Универсальный LLM-клиент (DeepSeek по умолчанию, совместим с Grok)."""
 
 import os
 import json
 from typing import Optional
 import requests
 from dotenv import load_dotenv
+import time
+import logging
 
 # Загружаем переменные окружения
 load_dotenv()
 
-# Базовый URL для Grok API от xAI (OpenAI-совместимый endpoint)
-GROK_API_BASE_URL = "https://api.x.ai/v1/chat/completions"
+# Провайдер и endpoint по умолчанию (OpenAI-совместимый API)
+DEFAULT_PROVIDER = os.getenv("AI_PROVIDER", "deepseek").strip().lower()
+AI_API_BASE_URL = os.getenv(
+    "AI_API_BASE_URL",
+    "https://api.deepseek.com/v1/chat/completions"
+)
 
 # Модель по умолчанию
-DEFAULT_MODEL = "grok-4-fast-reasoning"
+DEFAULT_MODEL = os.getenv("AI_MODEL", "deepseek-chat")
+REQUEST_TIMEOUT = 60
+MAX_RETRIES = 3
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+_http_session = requests.Session()
+logger = logging.getLogger(__name__)
+
+
+def get_active_provider() -> str:
+    """
+    Возвращает активного AI-провайдера для подсказок в UI.
+    """
+    return DEFAULT_PROVIDER
+
+
+def get_api_key_hints() -> str:
+    """
+    Возвращает подсказку по доступным переменным API ключа.
+    """
+    return "DEEPSEEK_API_KEY (рекомендуется), AI_API_KEY, GROK_API_KEY"
 
 
 def get_client_headers() -> dict:
     """
-    Возвращает заголовки для запросов к Grok API.
+    Возвращает заголовки для запросов к LLM API.
     
     Returns:
         dict: Словарь с заголовками Authorization и Content-Type
         
     Raises:
-        ValueError: Если GROK_API_KEY не установлен
+        ValueError: Если API ключ не установлен
     """
-    api_key = os.getenv("GROK_API_KEY")
+    api_key = (
+        os.getenv("DEEPSEEK_API_KEY")
+        or os.getenv("AI_API_KEY")
+        or os.getenv("GROK_API_KEY")
+    )
     if not api_key:
         raise ValueError(
-            "GROK_API_KEY не найден в переменных окружения. "
-            "Убедитесь, что файл .env существует и содержит GROK_API_KEY."
+            "API ключ не найден в переменных окружения. "
+            f"Добавьте одну из переменных: {get_api_key_hints()}."
         )
     
     return {
@@ -47,10 +77,10 @@ def call_grok_chat(
     max_tokens: Optional[int] = None
 ) -> str:
     """
-    Выполняет запрос к Grok API от xAI для генерации текста.
+    Выполняет запрос к OpenAI-совместимому LLM API для генерации текста.
     
     Args:
-        model: Название модели (по умолчанию grok-4-fast-reasoning)
+        model: Название модели (по умолчанию deepseek-chat)
         system_prompt: Системный промпт, определяющий роль модели
         user_prompt: Пользовательский промпт с заданием
         temperature: Температура генерации (0.0-2.0)
@@ -86,13 +116,34 @@ def call_grok_chat(
         payload["max_tokens"] = max_tokens
     
     try:
-        response = requests.post(
-            GROK_API_BASE_URL,
-            headers=headers,
-            json=payload,
-            timeout=60  # Таймаут 60 секунд
-        )
-        response.raise_for_status()  # Вызовет исключение при HTTP-ошибке
+        response = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = _http_session.post(
+                    AI_API_BASE_URL,
+                    headers=headers,
+                    json=payload,
+                    timeout=REQUEST_TIMEOUT
+                )
+                if response.status_code in RETRYABLE_STATUS_CODES and attempt < MAX_RETRIES:
+                    logger.warning(
+                        "Retryable LLM status %s on attempt %s/%s",
+                        response.status_code,
+                        attempt,
+                        MAX_RETRIES
+                    )
+                    time.sleep(0.8 * attempt)
+                    continue
+                response.raise_for_status()
+                break
+            except requests.exceptions.Timeout:
+                if attempt < MAX_RETRIES:
+                    logger.warning("LLM timeout on attempt %s/%s", attempt, MAX_RETRIES)
+                    time.sleep(0.8 * attempt)
+                    continue
+                raise
+        if response is None:
+            raise RuntimeError("LLM API не вернул ответ.")
         
         data = response.json()
         
@@ -106,7 +157,7 @@ def call_grok_chat(
             raise RuntimeError(f"Неожиданный формат ответа API: {data}")
             
     except requests.exceptions.RequestException as e:
-        error_msg = f"Ошибка при обращении к Grok API: {str(e)}"
+        error_msg = f"Ошибка при обращении к LLM API: {str(e)}"
         if hasattr(e, 'response') and e.response is not None:
             status_code = e.response.status_code
             if status_code == 401:
@@ -116,12 +167,14 @@ def call_grok_chat(
                     "Возможные причины:\n"
                     "1. API ключ не установлен или неверный\n"
                     "2. Файл .env отсутствует или не загружается\n"
-                    "3. API ключ истёк или был отозван\n\n"
+                    "3. API ключ истёк или был отозван\n"
+                    "4. Используется не тот endpoint для выбранного провайдера\n\n"
                     "Решение:\n"
                     "1. Убедитесь, что файл .env существует в корне проекта\n"
-                    "2. Проверьте, что в .env есть строка: GROK_API_KEY=your_actual_key\n"
-                    "3. Получите новый API ключ на https://console.x.ai\n"
-                    "4. Перезапустите приложение после изменения .env"
+                    f"2. Добавьте ключ в .env: {get_api_key_hints()}\n"
+                    "3. Для DeepSeek используйте https://api.deepseek.com/v1/chat/completions\n"
+                    "4. Для Grok используйте https://api.x.ai/v1/chat/completions\n"
+                    "5. Перезапустите приложение после изменения .env"
                 )
             else:
                 try:
@@ -174,7 +227,7 @@ def refine_generation_if_needed(
     
     Args:
         text: Текст, который может быть оборван
-        model: Модель для догенерации (по умолчанию grok-4-fast-reasoning)
+        model: Модель для догенерации (по умолчанию deepseek-chat)
         
     Returns:
         str: Завершённый текст (исходный + дополнение, если было нужно)

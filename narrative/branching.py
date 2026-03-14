@@ -38,7 +38,7 @@ def generate_branch(
         initial_scene: Начальная сцена или текущее состояние истории
         choice: Вариант выбора, который приводит к ветвлению
         previous_branches: Предыдущие ветвления (для контекста)
-        model: Модель для генерации (по умолчанию grok-4-fast-reasoning)
+        model: Модель для генерации (по умолчанию deepseek-chat)
         
     Returns:
         Dict: Ветвление с текстом и анализом в формате JSON

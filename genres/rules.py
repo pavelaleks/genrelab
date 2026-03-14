@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 from genres.schema import Genre
 from services.grok_client import call_grok_chat
+from utils import extract_json_object
 
 
 @dataclass
@@ -128,20 +129,7 @@ def analyze_text_with_llm(
             temperature=0.3  # Низкая температура для более точного анализа
         )
         
-        # Пытаемся извлечь JSON из ответа
-        # Иногда модель может добавить пояснения до или после JSON
-        response = response.strip()
-        
-        # Ищем JSON в ответе
-        json_start = response.find('{')
-        json_end = response.rfind('}') + 1
-        
-        if json_start != -1 and json_end > json_start:
-            json_str = response[json_start:json_end]
-            result = json.loads(json_str)
-        else:
-            # Если не нашли JSON, пытаемся распарсить весь ответ
-            result = json.loads(response)
+        result = extract_json_object(response)
         
         # Валидация и нормализация результата
         return _normalize_analysis_result(result)
@@ -218,6 +206,7 @@ def _get_safe_analysis_result(error: str = "") -> Dict:
         Dict: Безопасная структура с сообщением об ошибке
     """
     return {
+        "error": bool(error),
         "scores": {
             "genre_fit": 0,
             "tonality_fit": 0,
@@ -306,5 +295,5 @@ def break_genre_with_llm(
         )
         return response.strip()
     except Exception as e:
-        return f"[Ошибка при генерации модифицированного текста: {str(e)}]"
+        raise RuntimeError(str(e)) from e
 

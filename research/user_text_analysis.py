@@ -1,10 +1,10 @@
 """Модуль для анализа пользовательского текста."""
 
 import json
-from pathlib import Path
 from typing import Dict, List
 from genres.schema import Genre
-from services.grok_client import call_grok_chat
+from services.grok_client import call_grok_chat, DEFAULT_MODEL
+from utils import extract_json_object, load_prompt
 
 
 def build_user_analysis_prompt(text: str, genres: List[Genre]) -> str:
@@ -101,7 +101,7 @@ def build_user_analysis_prompt(text: str, genres: List[Genre]) -> str:
 
 def analyze_user_text(text: str, genres: List[Genre]) -> Dict:
     """
-    Анализирует пользовательский текст с помощью Grok API.
+    Анализирует пользовательский текст с помощью LLM API.
     
     Args:
         text: Текст для анализа
@@ -111,39 +111,25 @@ def analyze_user_text(text: str, genres: List[Genre]) -> Dict:
         Dict: Словарь с результатами анализа
     """
     # Загружаем системный промпт
-    prompt_path = Path("prompts/user_analysis_prompt.txt")
-    if prompt_path.exists():
-        with open(prompt_path, "r", encoding="utf-8") as f:
-            system_prompt = f.read()
-    else:
-        system_prompt = """Ты — профессиональный литературовед. 
-        Проведи детальный анализ текста и верни результат строго в формате JSON."""
+    system_prompt = load_prompt(
+        "prompts/user_analysis_prompt.txt",
+        fallback="""Ты — профессиональный литературовед.
+Проведи детальный анализ текста и верни результат строго в формате JSON.""",
+    )
     
     # Формируем user_prompt
     user_prompt = build_user_analysis_prompt(text, genres)
     
     try:
-        # Вызываем Grok API
+        # Вызываем LLM API
         response = call_grok_chat(
-            model="grok-4-fast-reasoning",
+            model=DEFAULT_MODEL,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=0.3  # Низкая температура для более точного анализа
         )
         
-        # Пытаемся извлечь JSON из ответа
-        response = response.strip()
-        
-        # Ищем JSON в ответе
-        json_start = response.find('{')
-        json_end = response.rfind('}') + 1
-        
-        if json_start != -1 and json_end > json_start:
-            json_str = response[json_start:json_end]
-            result = json.loads(json_str)
-        else:
-            # Если не нашли JSON, пытаемся распарсить весь ответ
-            result = json.loads(response)
+        result = extract_json_object(response)
         
         # Валидация и нормализация результата
         return _normalize_analysis_result(result, genres)

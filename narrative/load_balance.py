@@ -3,6 +3,7 @@
 import time
 import streamlit as st
 from typing import Optional, Callable
+import requests
 
 # Максимальная длина вводимого текста (символов)
 MAX_CHARS = 2500
@@ -77,7 +78,7 @@ def handle_grok_error(func: Callable, *args, **kwargs):
     """
     try:
         return func(*args, **kwargs)
-    except TimeoutError:
+    except (TimeoutError, requests.exceptions.Timeout):
         raise RuntimeError(
             "⏱️ Сервер не отвечает. Возможно, он перегружен. "
             "Пожалуйста, подождите немного и попробуйте ещё раз."

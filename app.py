@@ -2,32 +2,94 @@
 
 import streamlit as st
 import os
+import logging
 from pathlib import Path
-from genres.schema import get_all_genres, get_genre_by_id, Genre
+from genres.schema import get_all_genres, get_genre_by_id
 from genres.rules import AnalysisParams, analyze_text_with_llm, break_genre_with_llm
-from services.grok_client import call_grok_chat, refine_generation_if_needed
+from services.grok_client import (
+    get_active_provider,
+    get_api_key_hints
+)
 from components.radar import build_radar_chart
 from research.user_text_analysis import analyze_user_text
 from narrative.builder import generate_plot_structure, generate_node_text
 from narrative.graph import build_story_graph, get_graph_statistics
 from narrative.branching import generate_branch, compare_branches
 from narrative.transformations import transform_text
-from narrative.load_balance import validate_text_length, request_with_delay, handle_grok_error, MAX_CHARS
-from narrative.qr_utils import display_qr_code
+from narrative.load_balance import validate_text_length, request_with_delay, MAX_CHARS
+from utils import init_session_state, load_prompt, trim_list_state
+from ai_engine import generate_text, stream_text
+from ui_components import (
+    render_hero,
+    render_platform_description,
+    render_api_setup_help,
+    render_api_key_error_block,
+)
+
+logging.basicConfig(level=logging.INFO)
+
+# Настройка страницы должна быть первой streamlit-командой
+st.set_page_config(
+    page_title="NARRALAB - Платформа интерактивного сторителлинга",
+    page_icon="✨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Проброс секретов из Streamlit Cloud в окружение (чтобы grok_client видел DEEPSEEK_API_KEY)
+try:
+    for key in ("DEEPSEEK_API_KEY", "AI_API_KEY", "GROK_API_KEY", "APP_LOGIN", "APP_PASSWORD"):
+        if hasattr(st, "secrets") and key in st.secrets and not os.environ.get(key):
+            os.environ[key] = str(st.secrets.get(key) or "")
+except Exception:
+    pass
+
+# Учётные данные для входа (Streamlit Cloud: Secrets; локально: .env или переменные окружения)
+def _get_secret(key: str, default: str = "") -> str:
+    try:
+        return (st.secrets.get(key) or os.getenv(key, default)) or default
+    except Exception:
+        return os.getenv(key, default)
+
+APP_LOGIN = _get_secret("APP_LOGIN", "").strip()
+APP_PASSWORD = _get_secret("APP_PASSWORD", "").strip()
+AUTH_REQUIRED = bool(APP_PASSWORD)
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+# Экран входа: показываем только форму логина, пока пользователь не введёт верные данные
+if AUTH_REQUIRED and not st.session_state.authenticated:
+    st.markdown("<div style='max-width: 420px; margin: 4rem auto; padding: 2rem;'>", unsafe_allow_html=True)
+    st.header("🔐 Вход в NARRALAB")
+    st.markdown("Введите логин и пароль, полученные от преподавателя.")
+    with st.form("login_form"):
+        login = st.text_input("Логин", placeholder="логин" if APP_LOGIN else "не требуется")
+        password = st.text_input("Пароль", type="password", placeholder="пароль")
+        submitted = st.form_submit_button("Войти")
+    if submitted:
+        login_ok = (login.strip() == APP_LOGIN) if APP_LOGIN else True
+        if login_ok and password == APP_PASSWORD:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Неверный логин или пароль.")
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
 # Элегантный минималистичный дизайн
 st.markdown("""
 <style>
-/* Спокойная цветовая палитра */
+/* Спокойная светлая палитра */
 :root {
-    --primary: #4a5568;
-    --primary-light: #718096;
-    --accent: #2d3748;
-    --bg-main: #f7fafc;
-    --bg-card: #ffffff;
-    --text-primary: #2d3748;
-    --text-secondary: #4a5568;
-    --text-muted: #718096;
+    --primary: #2563eb;          /* насыщенный синий для акцентов */
+    --primary-light: #60a5fa;    /* более светлый синий */
+    --accent: #1d4ed8;           /* тёмный синий для hover */
+    --bg-main: #f9fafb;          /* очень светлый серый фон */
+    --bg-card: #ffffff;          /* карточки на белом фоне */
+    --text-primary: #111827;     /* почти чёрный текст */
+    --text-secondary: #4b5563;   /* тёмно-серый вторичный текст */
+    --text-muted: #6b7280;       /* приглушённый текст */
     --border: #e2e8f0;
     --border-light: #edf2f7;
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -69,12 +131,24 @@ h3 {
     margin-bottom: 0.5rem !important;
 }
 
-/* Основной текст */
+/* Основной текст — чуть крупнее для удобства чтения */
 p, .stMarkdown, .stText {
     color: var(--text-primary) !important;
-    font-size: 1rem !important;
+    font-size: 1.0625rem !important;
     line-height: 1.6 !important;
     margin-bottom: 1rem !important;
+}
+
+/* Сайдбар — подписи полей крупнее и контрастнее */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown {
+    font-size: 1rem !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] .stSlider label {
+    font-size: 1rem !important;
 }
 
 /* Поля ввода - чистые и простые */
@@ -108,7 +182,7 @@ textarea[disabled], textarea:disabled {
     cursor: text !important;
 }
 
-/* Карточки - минималистичные */
+/* Карточки и блоки для чтения — минималистичные, крупнее шрифт */
 .generated-text, .transformed-text, .analysis-block, .story-node-output {
     background: var(--bg-card) !important;
     color: var(--text-primary) !important;
@@ -117,13 +191,20 @@ textarea[disabled], textarea:disabled {
     border: 1px solid var(--border) !important;
     box-shadow: var(--shadow-sm) !important;
     margin: 1rem 0 !important;
+    font-size: 1.125rem !important;
+    line-height: 1.75 !important;
+}
+/* Текст внутри полей результата (textarea) — крупнее для удобства */
+.generated-text textarea, .transformed-text textarea, .analysis-block textarea, .story-node-output textarea {
+    font-size: 1.0625rem !important;
+    line-height: 1.7 !important;
 }
 
-/* Кнопки - спокойные и элегантные */
+/* Кнопки - светлые, с акцентами */
 .stButton > button {
-    background-color: var(--primary) !important;
-    color: white !important;
-    border: none !important;
+    background-color: #eff6ff !important; /* очень светлый синий фон */
+    color: var(--primary) !important;
+    border: 1px solid var(--primary-light) !important;
     border-radius: 6px !important;
     padding: 0.625rem 1.25rem !important;
     font-weight: 500 !important;
@@ -133,14 +214,14 @@ textarea[disabled], textarea:disabled {
 }
 
 .stButton > button:hover {
-    background-color: var(--accent) !important;
+    background-color: #dbeafe !important;
     transform: none !important;
 }
 
 .stButton > button[kind="secondary"] {
     background-color: transparent !important;
     color: var(--primary) !important;
-    border: 1px solid var(--border) !important;
+    border: 1px solid var(--primary-light) !important;
 }
 
 .stButton > button[kind="secondary"]:hover {
@@ -156,9 +237,9 @@ textarea[disabled], textarea:disabled {
 }
 
 [data-testid="stMetricLabel"] {
-    font-size: 0.875rem !important;
-    color: var(--text-secondary) !important;
-    font-weight: 400 !important;
+    font-size: 0.9375rem !important;
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
 }
 
 [data-testid="stMetricContainer"] {
@@ -313,9 +394,9 @@ div[data-baseweb="notification"][data-kind="error"] span {
     border-color: var(--primary) !important;
 }
 
-/* Slider */
-.stSlider > div > div {
-    background-color: var(--primary) !important;
+/* Slider – только заполненная часть трека синяя, фон остаётся светлым */
+.stSlider [data-baseweb="slider"] > div > div:nth-child(2) {
+    background-color: var(--primary-light) !important;
 }
 
 /* Checkbox */
@@ -349,6 +430,49 @@ div[data-baseweb="notification"][data-kind="error"] span {
 .stExpander {
     background-color: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
+}
+
+/* Скрываем иконки, которые Streamlit показывает как текст (arrow_right, keyboard_double_a и т.д.) */
+.stExpander [data-testid="expanderExpandIcon"],
+[aria-label="arrow_down (right)"],
+[aria-label="arrow_down"],
+[aria-label="arrow_right"],
+[aria-label="_arrow_right"],
+[aria-label="arrow_down (right)"],
+[aria-label="arrow_down"],
+[aria-label="arrow_right"],
+[aria-label="_arrow_right"],
+[title="arrow_down (right)"],
+[title="arrow_down"],
+[title="arrow_right"],
+[title="_arrow_right"] {
+    display: none !important;
+}
+/* Текст "keyboard_double_a" над сайдбаром (кнопка сворачивания) — скрываем только надпись, кнопка остаётся */
+[aria-label="keyboard_double_a"],
+[title="keyboard_double_a"],
+[data-testid="stSidebar"] button[aria-label="keyboard_double_a"],
+[data-testid="stSidebar"] [title="keyboard_double_a"] {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+    color: transparent !important;
+}
+[aria-label="keyboard_double_a"] *,
+[title="keyboard_double_a"] * {
+    font-size: 0 !important;
+    color: transparent !important;
+}
+/* Блок иконки в заголовке expander — скрываем, чтобы не показывался текст _arrow_right */
+[data-baseweb="accordion-header"] > div:last-of-type {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .stExpander label {
@@ -492,106 +616,66 @@ blockquote {
 </style>
 """, unsafe_allow_html=True)
 
-# Настройка страницы
-st.set_page_config(
-    page_title="NARRALAB - Платформа интерактивного сторителлинга",
-    page_icon="✨",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Hero секция
-st.markdown("""
-<div class="hero-section">
-    <h1>✨ NARRALAB</h1>
-    <p style="font-size: 1.1rem; margin-bottom: 0.5rem; color: #4a5568;">Платформа интерактивного сторителлинга с использованием ИИ</p>
-    <p style="font-size: 0.9375rem; color: #718096; margin: 0;">Создавайте, анализируйте и экспериментируйте с историями нового поколения</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Описание платформы
-st.markdown("""
-<div style="text-align: center; margin: 1.5rem 0; padding: 1.25rem; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
-    <p style="font-size: 0.9375rem; color: #4a5568; margin: 0; line-height: 1.6;">
-        <strong style="color: #2d3748;">NARRALAB</strong> — это профессиональная платформа для создания интерактивных историй, 
-        анализа литературных жанров и экспериментов с трансмедиальным сторителлингом. 
-        Используйте возможности искусственного интеллекта для генерации, анализа и трансформации текстов.
-    </p>
-</div>
-""", unsafe_allow_html=True)
+# Hero и описание
+render_hero()
+render_platform_description()
 
 # Проверка наличия API ключа
 env_path = Path(".env")
-api_key = os.getenv("GROK_API_KEY")
+api_key = (
+    os.getenv("DEEPSEEK_API_KEY")
+    or os.getenv("AI_API_KEY")
+    or os.getenv("GROK_API_KEY")
+)
+active_provider = get_active_provider().capitalize()
 
 if not api_key:
-    st.warning("⚠️ **API ключ не найден!**")
-    with st.expander("📋 Как настроить API ключ", expanded=True):
-        st.markdown("""
-        Для работы приложения необходим API ключ от Grok.
-        
-        **Быстрая настройка:**
-        
-        1. **Создайте файл `.env`** в корне проекта (там же, где находится `app.py`)
-        
-        2. **Добавьте в файл `.env`** следующую строку:
-           ```
-           GROK_API_KEY=your_actual_grok_api_key_here
-           ```
-        
-        3. **Получите API ключ:**
-           - Зарегистрируйтесь на [console.x.ai](https://console.x.ai)
-           - Перейдите в раздел **API Keys**
-           - Создайте новый ключ
-           - Скопируйте ключ и вставьте в файл `.env` вместо `your_actual_grok_api_key_here`
-        
-        4. **Перезапустите приложение** после создания/изменения `.env` файла
-        
-        ⚠️ **Важно:** 
-        - Файл `.env` должен быть в той же директории, что и `app.py`
-        - Не добавляйте пробелы вокруг знака `=`
-        - Не коммитьте файл `.env` в git (он уже в .gitignore)
-        """)
+    render_api_setup_help(active_provider=active_provider, api_key_hints=get_api_key_hints())
     
     if not env_path.exists():
         st.info(f"💡 Файл `.env` не найден в директории: `{Path.cwd()}`")
     else:
-        st.info("💡 Файл `.env` найден, но `GROK_API_KEY` не загружен. Проверьте формат файла.")
+        st.info(f"💡 Файл `.env` найден, но ключ для `{active_provider}` не загружен. Проверьте формат файла.")
     
     st.markdown("---")
 
 st.markdown("---")
 
 # Инициализация session state
-if "selected_genre_id" not in st.session_state:
-    st.session_state.selected_genre_id = None
-if "generated_text" not in st.session_state:
-    st.session_state.generated_text = ""
-if "analysis_result" not in st.session_state:
-    st.session_state.analysis_result = None
-if "broken_text" not in st.session_state:
-    st.session_state.broken_text = ""
-if "user_text_analysis" not in st.session_state:
-    st.session_state.user_text_analysis = None
-if "user_text_input" not in st.session_state:
-    st.session_state.user_text_input = ""
-if "plot_structure" not in st.session_state:
-    st.session_state.plot_structure = None
-if "branching_history" not in st.session_state:
-    st.session_state.branching_history = []
-if "branching_scene" not in st.session_state:
-    st.session_state.branching_scene = ""
-if "transformation_result" not in st.session_state:
-    st.session_state.transformation_result = None
+init_session_state(
+    {
+        "selected_genre_id": None,
+        "generated_text": "",
+        "analysis_result": None,
+        "broken_text": "",
+        "user_text_analysis": None,
+        "user_text_input": "",
+        "plot_structure": None,
+        "branching_history": [],
+        "branching_scene": "",
+        "transformation_result": None,
+    }
+)
+trim_list_state("branching_history", max_items=20)
 
 # Получаем список жанров
 all_genres = get_all_genres()
 
 # ==================== ВКЛАДКИ ====================
-tab1, tab2, tab3 = st.tabs(["🎨 Генератор историй", "📊 Анализ текста", "🌳 Narrative Playground"])
+tab_help, tab1, tab2, tab3 = st.tabs([
+    "📖 Как пользоваться",
+    "🎨 Генератор историй",
+    "📊 Анализ текста",
+    "🌳 Narrative Playground"
+])
 
 # ==================== САЙДБАР ====================
 with st.sidebar:
+    if AUTH_REQUIRED:
+        if st.button("🚪 Выйти", use_container_width=True):
+            st.session_state.authenticated = False
+            st.rerun()
+        st.markdown("---")
     st.header("⚙️ Настройки")
     
     # Выбор жанра
@@ -677,6 +761,80 @@ with st.sidebar:
         target_length=target_length
     )
 
+# ==================== ВКЛАДКА: КАК ПОЛЬЗОВАТЬСЯ ====================
+with tab_help:
+    st.header("📖 Инструкция по использованию NARRALAB")
+    st.markdown("""
+    Ниже описаны **все возможности платформы** по разделам. Рекомендуем начать с настройки API-ключа, затем перейти в «Генератор историй» или «Анализ текста».
+    """)
+    st.markdown("---")
+
+    # 0. Настройка
+    with st.expander("🔑 Настройка перед началом работы", expanded=True):
+        st.markdown("""
+        1. **Вход.** Если приложение защищено (настроен логин/пароль), сначала введите данные, полученные от преподавателя. Кнопка **«Выйти»** в боковой панели завершает сессию.
+        2. **API-ключ.** Если вы запускаете приложение **локально**, создайте в корне проекта файл `.env` и добавьте `DEEPSEEK_API_KEY=ваш_ключ`. Ключ: [platform.deepseek.com](https://platform.deepseek.com/api_keys).  
+           Если приложение размещено на **Streamlit Cloud** и ключ задан в настройках (Secrets), вводить ключ не нужно — всё уже настроено.
+        3. **Запуск (локально).** В терминале из папки проекта: `streamlit run app.py`. Откроется браузер.
+        4. **Вкладки.** Сверху: **Как пользоваться**, **Генератор историй**, **Анализ текста**, **Narrative Playground**.
+        """)
+
+    # 1. Генератор историй
+    st.subheader("🎨 Генератор историй")
+    st.markdown("""
+    **Назначение:** создание текста в выбранном жанре с заданными параметрами, проверка соответствия жанру и эксперимент «Сломать жанр».
+    """)
+    with st.expander("Подробно: Генератор историй"):
+        st.markdown("""
+        - **Слева (сайдбар)** задаются жанр и параметры: тональность, фокус повествования, уровень описательности, количество персонажей, моральная развязка, сеттинг, объём в словах. Они применяются к вкладке «Генератор историй».
+        - **Описание и профиль жанра.** В начале страницы — описание жанра, типичные признаки, структурная схема и радарная диаграмма (оси: сюжетность, описательность, конфликтность и др.). Раздел «Что означают оси радара» можно раскрыть по желанию.
+        - **Генерация.** Кнопка «Сгенерировать текст» отправляет запрос в ИИ. Появится черновик; его можно править в поле ниже.
+        - **Анализ соответствия жанру.** После правок нажмите «Проанализировать текст». Отобразятся оценки (жанр, тональность, структура, стиль), комментарий, сильные стороны, слабые места, рекомендации и сравнение профиля текста с идеальным профилем жанра на радаре.
+        - **Режим «Сломать жанр».** Появляется после анализа. Создаётся вариант того же текста, который намеренно нарушает жанровые нормы, но остаётся узнаваемым — полезно для учёбы и экспериментов.
+        """)
+
+    # 2. Анализ текста
+    st.subheader("📊 Анализ текста")
+    st.markdown("""
+    **Назначение:** полный литературоведческий разбор вашего текста (жанр, структура, нарратив, фокализация, стиль) с цитатами.
+    """)
+    with st.expander("Подробно: Анализ текста"):
+        st.markdown("""
+        - **Ввод текста.** Можно загрузить файл **.txt** или вставить отрывок в поле «Или введите текст вручную». Минимум около 50 символов. Нажмите «Анализировать текст».
+        - **Результаты.** Появятся блоки:
+          - **Жанровая принадлежность** — основной жанр, вероятности по жанрам, элементы других жанров, объяснение.
+          - **Структурный анализ** — тип структуры, экспозиция, завязка/конфликт, развитие, кульминация, развязка.
+          - **Нарратив и фокализация** — тип повествователя, фокализация (нулевая/внутренняя/внешняя), временной поток.
+          - **Стилистический анализ** — регистр, лексика, синтаксис, риторические приёмы.
+          - **Цитаты-доказательства** — цитаты из текста с пояснениями по разным аспектам.
+        """)
+
+    # 3. Narrative Playground
+    st.subheader("🌳 Narrative Playground")
+    st.markdown("""
+    **Назначение:** три инструмента в одном разделе: конструктор сюжета, ветвящиеся истории, трансформация медиума.
+    """)
+    with st.expander("Подробно: Конструктор сюжета (Plot Builder)"):
+        st.markdown("""
+        - Заполните форму: **тип структуры** (linear, branching, circular, mosaic, Rashomon, split-perspective, epistolary), **количество узлов** (3–15), **жанр**, **стилистика**, **эпоха**. Нажмите «Сгенерировать сюжетную структуру».
+        - Появится граф сюжета и статистика (узлы, связи и т.д.). Ниже можно **выбрать узел** и нажать «Сгенерировать текст узла» — ИИ напишет текст для этой точки сюжета.
+        """)
+    with st.expander("Подробно: Ветвящиеся истории (Branching Narrative Lab)"):
+        st.markdown("""
+        - Раскройте блок **«Как использовать в writers' room»** — там краткие подсказки для сценаристов.
+        - В форме укажите **начальную сцену** и **вариант выбора** героя. «Создать ветвление» — ИИ сгенерирует альтернативное продолжение и анализ (жанровый сдвиг, фокализация, стиль, напряжение).
+        - Все ветвления сохраняются в **«История ветвлений»** с метками (Сцена 1, 2, …). При двух и более ветвлениях доступен **сравнительный анализ**.
+        - Кнопка «Начать заново» очищает историю ветвлений.
+        """)
+    with st.expander("Подробно: Трансформация медиума (Form Shifter)"):
+        st.markdown("""
+        - Введите **исходный текст** (от 50 символов, максимум 2500) и выберите **целевой формат**: пьеса, сценарий, подкаст, комикс, визуальный роман, игровая сцена, дневниковая запись, соцсетевой пост, поэтическая версия.
+        - «Преобразовать текст» — получите вариант в выбранном формате и краткое объяснение: как изменились структура, фокализация, стиль и эффект.
+        """)
+
+    st.markdown("---")
+    st.caption("При ошибках API (ключ не найден, 401) откройте блок «Инструкция по настройке API ключа» в сообщении об ошибке или настройте файл `.env` и перезапустите приложение.")
+
 # ==================== ВКЛАДКА 1: ЛАБОРАТОРИЯ ЖАНРОВ ====================
 with tab1:
     # ==================== ОСНОВНАЯ ОБЛАСТЬ ====================
@@ -688,8 +846,8 @@ with tab1:
     # Блок 1: Описание жанра
     st.header(f"📖 {selected_genre.name}")
     st.markdown(f"""
-    <div style='background: #ffffff; padding: 1.5rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;'>
-        <p style='font-size: 0.9375rem; color: #4a5568; margin: 0; line-height: 1.6;'>{selected_genre.description}</p>
+    <div style='background: #ffffff; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;'>
+        <p style='font-size: 1.0625rem; color: #374151; margin: 0; line-height: 1.7;'>{selected_genre.description}</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -709,16 +867,16 @@ with tab1:
     
     # Блок 2: Профиль жанра (радар)
     st.header("📊 Профиль жанра")
-    st.markdown("""
-    Радарная диаграмма показывает характерные особенности жанра по следующим осям:
-    - **Сюжетность**: насколько развит сюжет
-    - **Описательность**: уровень детализации
-    - **Конфликтность**: выраженность конфликта
-    - **Лиричность**: эмоциональность и лирические отступления
-    - **Условность**: степень условности/фантастичности
-    - **Нравственная окраска**: выраженность моральной позиции
-    - **Социальность**: социальный контекст
-    """)
+    with st.expander("Что означают оси радара", expanded=False):
+        st.markdown("""
+        - **Сюжетность** — насколько развит сюжет  
+        - **Описательность** — уровень детализации  
+        - **Конфликтность** — выраженность конфликта  
+        - **Лиричность** — эмоциональность и отступления  
+        - **Условность** — степень условности/фантастичности  
+        - **Нравственная окраска** — моральная позиция  
+        - **Социальность** — социальный контекст
+        """)
     
     radar_fig = build_radar_chart(selected_genre.radar_profile)
     st.plotly_chart(radar_fig, use_container_width=True)
@@ -727,18 +885,16 @@ with tab1:
 
     # Блок 3: Генерация текста
     st.header("✍️ Генерация текста")
-    st.info("💡 Текст генерируется в завершённом виде. Если модель попытается обрезать текст — система автоматически завершит его до логического окончания.")
+    st.info("💡 Шаг 1/3: Сначала сгенерируйте текст. Затем анализируйте его и при желании используйте режим «Сломать жанр».")
     
     if st.button("🔄 Сгенерировать текст", type="primary", use_container_width=True):
-        with st.spinner("Генерирую текст..."):
+        with st.status("Генерация текста...", expanded=True) as status:
             try:
-                # Загружаем промпт для генерации
-                prompt_path = Path("prompts/generate_prompt.txt")
-                if prompt_path.exists():
-                    with open(prompt_path, "r", encoding="utf-8") as f:
-                        system_prompt = f.read()
-                else:
-                    system_prompt = "Ты — опытный литературный автор. Создай текст в заданном жанре с учётом всех параметров."
+                status.write("Подготавливаю промпт...")
+                system_prompt = load_prompt(
+                    "prompts/generate_prompt.txt",
+                    fallback="Ты — опытный литературный автор. Создай текст в заданном жанре с учётом всех параметров."
+                )
                 
                 # Формируем user_prompt
                 moral_text = "да" if st.session_state.params.has_moral else "нет"
@@ -776,52 +932,30 @@ with tab1:
 
 Создай текст, строго следуя всем указанным требованиям."""
                 
-                # Вызываем API
-                generated = call_grok_chat(
+                status.write("Отправляю запрос в LLM...")
+                generated = generate_text(
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     temperature=0.8,
-                    max_tokens=st.session_state.params.target_length * 2  # Примерная оценка токенов
+                    max_tokens=st.session_state.params.target_length * 2,
+                    ensure_complete=True
                 )
-                
-                # Проверяем и догенерируем завершение, если текст оборван
-                generated = refine_generation_if_needed(generated)
-                
+
                 st.session_state.generated_text = generated
                 st.session_state.analysis_result = None  # Сбрасываем анализ
                 st.session_state.broken_text = ""  # Сбрасываем сломанный текст
+                status.update(label="Готово", state="complete")
                 st.success("Текст успешно сгенерирован!")
                 
             except ValueError as e:
                 # Ошибка отсутствия API ключа
+                status.update(label="Ошибка", state="error")
                 st.error("❌ Проблема с API ключом")
                 st.error(str(e))
-                with st.expander("📋 Инструкция по настройке API ключа"):
-                    st.markdown("""
-                    **Шаг 1:** Создайте файл `.env` в корне проекта (если его нет)
-                    
-                    **Шаг 2:** Добавьте в файл `.env` следующую строку:
-                    ```
-                    GROK_API_KEY=your_actual_grok_api_key_here
-                    ```
-                    
-                    **Шаг 3:** Получите API ключ:
-                    1. Зарегистрируйтесь на [console.x.ai](https://console.x.ai)
-                    2. Перейдите в раздел API Keys
-                    3. Создайте новый ключ
-                    4. Скопируйте ключ и вставьте в файл `.env`
-                    
-                    **Шаг 4:** Перезапустите приложение:
-                    ```bash
-                    # Остановите приложение (Ctrl+C)
-                    # Затем запустите снова:
-                    streamlit run app.py
-                    ```
-                    
-                    ⚠️ **Важно:** Файл `.env` должен находиться в той же директории, что и `app.py`
-                    """)
+                render_api_key_error_block()
             except RuntimeError as e:
                 # Ошибка API (включая 401)
+                status.update(label="Ошибка", state="error")
                 error_str = str(e)
                 if "401" in error_str or "авторизации" in error_str.lower():
                     st.error(error_str)
@@ -829,15 +963,16 @@ with tab1:
                         st.markdown("""
                         **Проверьте:**
                         1. Файл `.env` существует в корне проекта
-                        2. В `.env` есть строка `GROK_API_KEY=...` (без пробелов вокруг `=`)
+                        2. В `.env` есть строка `DEEPSEEK_API_KEY=...` (или `GROK_API_KEY=...`)
                         3. API ключ скопирован полностью, без лишних символов
-                        4. API ключ активен на [console.x.ai](https://console.x.ai)
+                        4. Ключ активен у выбранного провайдера
                         
                         **После исправления перезапустите приложение!**
                         """)
                 else:
                     st.error(f"Ошибка при генерации текста: {error_str}")
             except Exception as e:
+                status.update(label="Ошибка", state="error")
                 st.error(f"Неожиданная ошибка: {str(e)}")
                 st.info("Проверьте логи для деталей.")
     
@@ -848,6 +983,10 @@ with tab1:
         # Обёртка для улучшения читаемости
         st.markdown('<div class="generated-text">', unsafe_allow_html=True)
         
+        st.markdown("**Предпросмотр (потоковый вывод):**")
+        st.write_stream(stream_text(st.session_state.generated_text))
+        st.markdown("---")
+
         # Позволяем редактировать текст
         edited_text = st.text_area(
             "Вы можете отредактировать текст перед анализом:",
@@ -878,23 +1017,14 @@ with tab1:
                         text=st.session_state.generated_text
                     )
                     st.session_state.analysis_result = analysis
-                    st.success("Анализ завершён!")
+                    if analysis.get("error"):
+                        st.warning("Анализ завершён с предупреждением: модель вернула некорректный формат, показан безопасный результат.")
+                    else:
+                        st.success("Анализ завершён!")
                 except ValueError as e:
                     st.error("❌ Проблема с API ключом")
                     st.error(str(e))
-                    with st.expander("📋 Инструкция по настройке API ключа"):
-                        st.markdown("""
-                        **Шаг 1:** Создайте файл `.env` в корне проекта (если его нет)
-                        
-                        **Шаг 2:** Добавьте в файл `.env` следующую строку:
-                        ```
-                        GROK_API_KEY=your_actual_grok_api_key_here
-                        ```
-                        
-                        **Шаг 3:** Получите API ключ на [console.x.ai](https://console.x.ai)
-                        
-                        **Шаг 4:** Перезапустите приложение после изменения `.env`
-                        """)
+                    render_api_key_error_block()
                 except RuntimeError as e:
                     error_str = str(e)
                     if "401" in error_str or "авторизации" in error_str.lower():
@@ -902,9 +1032,9 @@ with tab1:
                         with st.expander("🔧 Как исправить"):
                             st.markdown("""
                             **Проверьте:**
-                            1. Файл `.env` существует и содержит `GROK_API_KEY=...`
+                            1. Файл `.env` существует и содержит `DEEPSEEK_API_KEY=...` (или `GROK_API_KEY=...`)
                             2. API ключ скопирован полностью, без лишних символов
-                            3. API ключ активен на [console.x.ai](https://console.x.ai)
+                            3. API ключ активен у выбранного провайдера
                             
                             **После исправления перезапустите приложение!**
                             """)
@@ -1019,19 +1149,12 @@ with tab1:
                     except ValueError as e:
                         st.error("❌ Проблема с API ключом")
                         st.error(str(e))
+                        render_api_key_error_block()
                     except RuntimeError as e:
                         error_str = str(e)
                         if "401" in error_str or "авторизации" in error_str.lower():
                             st.error(error_str)
-                            with st.expander("🔧 Как исправить"):
-                                st.markdown("""
-                                **Проверьте:**
-                                1. Файл `.env` существует и содержит `GROK_API_KEY=...`
-                                2. API ключ скопирован полностью, без лишних символов
-                                3. API ключ активен на [console.x.ai](https://console.x.ai)
-                                
-                                **После исправления перезапустите приложение!**
-                                """)
+                            render_api_key_error_block()
                         else:
                             st.error(f"Ошибка при создании модифицированного текста: {error_str}")
                     except Exception as e:
@@ -1052,38 +1175,37 @@ with tab1:
                 st.markdown('</div>', unsafe_allow_html=True)
                 st.info("💡 Этот текст намеренно нарушает жанровые конвенции, но сохраняет связь с исходным жанром.")
     else:
-        st.info("👆 Нажмите кнопку «Сгенерировать текст», чтобы создать текст в выбранном жанре.")
+        st.info("👆 **Шаг 1:** Нажмите «Сгенерировать текст» — появится черновик в выбранном жанре. Затем его можно отредактировать, проанализировать и при желании «сломать» жанр.")
 
 # ==================== ВКЛАДКА 2: АНАЛИЗ МОЕГО ТЕКСТА ====================
 with tab2:
     # ==================== ВКЛАДКА "АНАЛИЗ МОЕГО ТЕКСТА" ====================
     st.header("📝 Анализ моего текста")
     st.markdown("""
-    Загрузите или вставьте свой текст для полного литературоведческого анализа:
-    жанровая принадлежность, структура, нарратив, фокализация, стиль.
+    Загрузите файл **.txt** или вставьте отрывок — получите разбор: жанр, структура, тип повествователя, фокализация и стиль с цитатами из текста.
     """)
     
-    # Загрузка файла
-    uploaded_file = st.file_uploader(
-        "Загрузите текстовый файл (.txt)",
-        type=["txt"],
-        help="Выберите файл с текстом для анализа"
-    )
-    
-    # Текстовое поле для ввода
-    user_text = st.text_area(
-        "Или введите текст вручную:",
-        value=st.session_state.user_text_input,
-        height=300,
-        help="Вставьте текст для анализа"
-    )
+    with st.form("user_text_form"):
+        uploaded_file = st.file_uploader(
+            "Загрузите текстовый файл (.txt)",
+            type=["txt"],
+            help="Выберите файл с текстом для анализа"
+        )
+        
+        user_text = st.text_area(
+            "Или введите текст вручную:",
+            value=st.session_state.user_text_input,
+            height=300,
+            help="Вставьте текст для анализа"
+        )
+        submitted = st.form_submit_button("🔍 Анализировать текст")
     
     # Обновляем session state
     if user_text != st.session_state.user_text_input:
         st.session_state.user_text_input = user_text
         st.session_state.user_text_analysis = None  # Сбрасываем анализ при изменении текста
     
-    # Обработка загруженного файла
+    # Обработка загруженного файла (даёт приоритет содержимому файла)
     if uploaded_file is not None:
         try:
             file_content = uploaded_file.read().decode("utf-8")
@@ -1094,7 +1216,7 @@ with tab2:
             st.error(f"Ошибка при чтении файла: {str(e)}")
     
     # Кнопка анализа
-    if st.button("🔍 Анализировать текст", type="primary", use_container_width=True):
+    if submitted:
         if not user_text or len(user_text.strip()) < 50:
             st.warning("⚠️ Текст слишком короткий. Введите или загрузите текст длиной не менее 50 символов.")
         else:
@@ -1106,6 +1228,7 @@ with tab2:
                 except ValueError as e:
                     st.error("❌ Проблема с API ключом")
                     st.error(str(e))
+                    render_api_key_error_block()
                 except RuntimeError as e:
                     error_str = str(e)
                     if "401" in error_str or "авторизации" in error_str.lower():
@@ -1295,63 +1418,55 @@ with tab3:
     
     st.markdown("---")
     
-    # Режим аудитории (QR-код для ngrok)
-    with st.expander("📱 Режим аудитории (QR-код для доступа через ngrok)", expanded=False):
-        st.markdown("""
-        **Для работы в аудитории:**
-        1. Запустите приложение с ngrok: `ngrok http 8501`
-        2. Установите переменную окружения NGROK_URL с URL от ngrok
-        3. Студенты сканируют QR-код и получают доступ к приложению на своих устройствах
-        """)
-        display_qr_code()
-    
-    st.markdown("---")
-    
     # Секция 1: Конструктор сюжета (Plot Builder)
     st.subheader("🏗️ Конструктор сюжета (Plot Builder)")
+    st.info("💡 **Для сценаристов:** Узлы — это сцены или ключевые точки. Линейная структура подходит для классического акта; branching — для интерактива и «точки выбора»; Rashomon — для нескольких версий одного события.")
     st.markdown("""
     Создайте структурированную сюжетную схему с узлами и связями. 
     Выберите тип структуры, количество узлов и параметры жанра.
     """)
     
-    plot_col1, plot_col2 = st.columns(2)
-    
-    with plot_col1:
-        structure_type = st.selectbox(
-            "Тип структуры:",
-            ["linear", "branching", "circular", "mosaic", "Rashomon", "split-perspective", "epistolary"],
-            help="Выберите тип сюжетной структуры"
-        )
+    with st.form("plot_builder_form"):
+        plot_col1, plot_col2 = st.columns(2)
         
-        num_nodes = st.slider(
-            "Количество узлов:",
-            min_value=3,
-            max_value=15,
-            value=5,
-            help="Количество узлов в сюжетной структуре"
-        )
+        with plot_col1:
+            structure_type = st.selectbox(
+                "Тип структуры:",
+                ["linear", "branching", "circular", "mosaic", "Rashomon", "split-perspective", "epistolary"],
+                help="Выберите тип сюжетной структуры"
+            )
+            
+            num_nodes = st.slider(
+                "Количество узлов:",
+                min_value=3,
+                max_value=15,
+                value=5,
+                help="Количество узлов в сюжетной структуре"
+            )
+            
+            genre_name_plot = st.selectbox(
+                "Жанр:",
+                [genre.name for genre in all_genres],
+                key="plot_genre",
+                help="Выберите жанр для сюжета"
+            )
         
-        genre_name_plot = st.selectbox(
-            "Жанр:",
-            [genre.name for genre in all_genres],
-            key="plot_genre",
-            help="Выберите жанр для сюжета"
-        )
-    
-    with plot_col2:
-        style_plot = st.selectbox(
-            "Стилистика:",
-            ["реалистическая", "романтическая", "модернистская", "постмодернистская", "экспериментальная"],
-            help="Стилистика повествования"
-        )
+        with plot_col2:
+            style_plot = st.selectbox(
+                "Стилистика:",
+                ["реалистическая", "романтическая", "модернистская", "постмодернистская", "экспериментальная"],
+                help="Стилистика повествования"
+            )
+            
+            era_plot = st.text_input(
+                "Эпоха:",
+                value="современность",
+                help="Эпоха, в которой происходит действие"
+            )
         
-        era_plot = st.text_input(
-            "Эпоха:",
-            value="современность",
-            help="Эпоха, в которой происходит действие"
-        )
+        plot_submitted = st.form_submit_button("🔄 Сгенерировать сюжетную структуру")
     
-    if st.button("🔄 Сгенерировать сюжетную структуру", type="primary", use_container_width=True):
+    if plot_submitted:
         with st.spinner("Генерирую сюжетную структуру..."):
             try:
                 selected_genre_plot = next((g for g in all_genres if g.name == genre_name_plot), all_genres[0])
@@ -1371,6 +1486,7 @@ with tab3:
             except ValueError as e:
                 st.error("❌ Проблема с API ключом")
                 st.error(str(e))
+                render_api_key_error_block()
             except RuntimeError as e:
                 error_str = str(e)
                 if "401" in error_str or "авторизации" in error_str.lower():
@@ -1463,28 +1579,40 @@ with tab3:
     
     # Секция 2: Ветвящиеся истории (Branching Narrative Lab)
     st.subheader("🌳 Ветвящиеся истории (Branching Narrative Lab)")
-    st.markdown("""
-    Создавайте интерактивные истории с ветвлениями. Каждый выбор ведёт к альтернативному развитию сюжета.
-    """)
     
-    initial_scene = st.text_area(
-        "Начальная сцена:",
-        value=st.session_state.branching_scene,
-        height=150,
-        help="Опишите начальную сцену или текущее состояние истории"
-    )
+    with st.expander("📖 Как использовать в writers' room", expanded=True):
+        st.markdown("""
+        **Ветвления полезны, когда нужно:**
+        - Продумать **точки выбора** героя (моральная дилемма, поворот сюжета, точка невозврата).
+        - Сравнить **альтернативные развития** одной сцены и увидеть, как меняются жанр, тон и напряжение.
+        - Подготовить **интерактивный сценарий** или черновик для игр/выборных историй.
+        
+        **Совет:** Задавайте начальную сцену чётко (место, персонажи, конфликт). Вариант выбора формулируйте как действие или решение героя — так модель лучше строит продолжение.
+        """)
+    
+    st.caption("Опишите сцену и выбор героя — система сгенерирует альтернативное продолжение и покажет, как меняются жанр, фокализация, стиль и напряжение.")
+    
+    with st.form("branching_form"):
+        initial_scene = st.text_area(
+            "Начальная сцена:",
+            value=st.session_state.branching_scene,
+            height=150,
+            help="Опишите начальную сцену или текущее состояние истории"
+        )
+        
+        choice = st.text_input(
+            "Вариант выбора:",
+            placeholder="Например: Герой решает пойти налево",
+            help="Опишите выбор, который приведёт к ветвлению истории"
+        )
+        
+        branching_submitted = st.form_submit_button("✨ Создать ветвление")
     
     if initial_scene != st.session_state.branching_scene:
         st.session_state.branching_scene = initial_scene
         st.session_state.branching_history = []  # Сбрасываем историю при изменении сцены
     
-    choice = st.text_input(
-        "Вариант выбора:",
-        placeholder="Например: Герой решает пойти налево",
-        help="Опишите выбор, который приведёт к ветвлению истории"
-    )
-    
-    if st.button("✨ Создать ветвление", type="primary", use_container_width=True):
+    if branching_submitted:
         if not initial_scene or len(initial_scene.strip()) < 20:
             st.warning("⚠️ Начальная сцена должна содержать не менее 20 символов.")
         elif not choice or len(choice.strip()) < 5:
@@ -1511,6 +1639,7 @@ with tab3:
                 except ValueError as e:
                     st.error("❌ Проблема с API ключом")
                     st.error(str(e))
+                    render_api_key_error_block()
                 except RuntimeError as e:
                     error_str = str(e)
                     if "401" in error_str or "авторизации" in error_str.lower():
@@ -1523,11 +1652,14 @@ with tab3:
     if st.session_state.branching_history:
         st.markdown("---")
         st.subheader("📚 История ветвлений")
+        st.caption("Каждое ветвление — альтернативная сцена. Метки помогают сравнивать тон, жанр и напряжение между вариантами.")
         
         for i, branch in enumerate(st.session_state.branching_history, 1):
-            with st.expander(f"🌿 Ветвление {i}: {branch.get('choice', 'Выбор')}"):
-                st.markdown(f"**Продолжение:**")
-                # Обёртка для текста ветвления
+            choice_label = (branch.get("choice") or "Выбор")[:50] + ("…" if len((branch.get("choice") or "")) > 50 else "")
+            with st.expander(f"**Сцена {i}** · {choice_label}", expanded=(i == len(st.session_state.branching_history))):
+                st.markdown("**Выбор героя:**")
+                st.caption(branch.get("choice", "—"))
+                st.markdown("**Продолжение:**")
                 st.markdown('<div class="generated-text">', unsafe_allow_html=True)
                 st.text_area(
                     "Текст ветвления",
@@ -1541,17 +1673,30 @@ with tab3:
                 
                 analysis = branch.get("analysis", {})
                 if analysis:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if analysis.get("genre_shift"):
-                            st.markdown(f"**Жанровый сдвиг:** {analysis['genre_shift']}")
-                        if analysis.get("focalization_change"):
-                            st.markdown(f"**Изменение фокализации:** {analysis['focalization_change']}")
-                    with col2:
-                        if analysis.get("style_change"):
-                            st.markdown(f"**Изменение стиля:** {analysis['style_change']}")
-                        if analysis.get("tension_change"):
-                            st.markdown(f"**Изменение напряжения:** {analysis['tension_change']}")
+                    st.markdown("**Метки для сценария:**")
+                    tags = []
+                    if analysis.get("genre_shift"):
+                        tags.append(f"Жанр: {analysis['genre_shift']}")
+                    if analysis.get("tension_change"):
+                        tags.append(f"Напряжение: {analysis['tension_change']}")
+                    if analysis.get("focalization_change"):
+                        tags.append(f"Фокализация: {analysis['focalization_change']}")
+                    if analysis.get("style_change"):
+                        tags.append(f"Стиль: {analysis['style_change']}")
+                    if tags:
+                        st.caption(" · ".join(tags))
+                    else:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if analysis.get("genre_shift"):
+                                st.markdown(f"**Жанровый сдвиг:** {analysis['genre_shift']}")
+                            if analysis.get("focalization_change"):
+                                st.markdown(f"**Изменение фокализации:** {analysis['focalization_change']}")
+                        with col2:
+                            if analysis.get("style_change"):
+                                st.markdown(f"**Изменение стиля:** {analysis['style_change']}")
+                            if analysis.get("tension_change"):
+                                st.markdown(f"**Изменение напряжения:** {analysis['tension_change']}")
         
         # Сравнительный анализ
         if len(st.session_state.branching_history) > 1:
@@ -1581,6 +1726,7 @@ with tab3:
     
     # Секция 3: Трансформация медиума (Form Shifter)
     st.subheader("🎭 Трансформация медиума (Form Shifter)")
+    st.info("💡 **Для сценаристов и писателей:** Один и тот же эпизод можно переложить в пьесу, сценарий, подкаст или игровую сцену — удобно для питчей, адаптаций и проверки «звучания» в другом формате.")
     st.markdown("""
     Преобразуйте текст в различные медиаформаты: пьеса, сценарий, подкаст, комикс, визуальный роман,
     игровая сцена, дневниковая запись, соцсетевой пост или поэтическая версия.

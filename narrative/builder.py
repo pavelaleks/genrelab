@@ -43,7 +43,7 @@ def generate_plot_structure(
         genre: Жанр
         style: Стилистика
         era: Эпоха
-        model: Модель для генерации (по умолчанию grok-4-fast-reasoning)
+        model: Модель для генерации (по умолчанию deepseek-chat)
         
     Returns:
         Dict: Структура сюжета в формате JSON с узлами и связями
@@ -153,7 +153,7 @@ def generate_node_text(
         genre: Жанр
         style: Стилистика
         era: Эпоха
-        model: Модель для генерации (по умолчанию grok-4-fast-reasoning)
+        model: Модель для генерации (по умолчанию deepseek-chat)
         
     Returns:
         str: Сгенерированный текст для узла

@@ -71,14 +71,14 @@
             ┌─────────▼─────────┐
             │  Services Layer   │
             │                   │
-            │  - Grok Client    │
+            │  - AI Client      │
             │  - API Handler    │
             │  - Error Handler   │
             └─────────┬─────────┘
                       │
             ┌─────────▼─────────┐
             │  External API     │
-            │  (Grok/xAI)       │
+            │ (DeepSeek/Grok)   │
             └───────────────────┘
 ```
 
@@ -101,7 +101,7 @@
 |-----------|------------|--------|------------|
 | **Backend** | Python | 3.10+ | Основной язык программирования |
 | **Frontend** | Streamlit | ≥1.28.0 | Веб-интерфейс и UI |
-| **AI API** | Grok (xAI) | - | Генерация и анализ текстов |
+| **AI API** | DeepSeek (default) / Grok | - | Генерация и анализ текстов |
 | **Визуализация** | Plotly | ≥5.17.0 | Интерактивные графики и диаграммы |
 | **Графы** | NetworkX | ≥3.0 | Построение сюжетных графов |
 | **QR-коды** | qrcode | ≥7.4 | Генерация QR-кодов для доступа |
@@ -148,7 +148,7 @@ narralab/
 │
 ├── services/                       # Сервисный слой
 │   ├── __init__.py
-│   └── grok_client.py              # Клиент для работы с Grok API
+│   └── grok_client.py              # Универсальный клиент LLM API (DeepSeek/Grok)
 │
 ├── narrative/                      # Модуль Narrative Playground
 │   ├── __init__.py
@@ -245,13 +245,13 @@ narralab/
    - Структурной схемы
    - Инструкций по генерации
    - Параметров пользователя
-4. **Запрос к API** — отправка запроса к Grok API
+4. **Запрос к API** — отправка запроса к LLM API
 5. **Проверка завершённости** — автоматическая проверка и догенерация при необходимости
 6. **Отображение результата** — показ сгенерированного текста с возможностью редактирования
 
 #### Технические детали:
 
-- **Модель по умолчанию**: `grok-4-fast-reasoning`
+- **Модель по умолчанию**: `deepseek-chat`
 - **Temperature**: 0.8 (для творческой генерации)
 - **Max tokens**: рассчитывается как `target_length * 2`
 - **Автодогенерация**: если текст обрывается, система автоматически завершает его
@@ -288,7 +288,7 @@ narralab/
 
 #### Технические детали:
 
-- Анализ выполняется через LLM (Grok API)
+- Анализ выполняется через LLM API (по умолчанию DeepSeek)
 - Используется промпт из `prompts/analyze_prompt.txt`
 - Результат парсится из JSON-ответа модели
 - Радарная диаграмма строится с помощью Plotly
@@ -544,13 +544,14 @@ narralab/
 
 ## 🔌 API и интеграции
 
-### Grok API (xAI)
+### LLM API (DeepSeek / Grok)
 
 #### Конфигурация:
 
-- **Endpoint**: `https://api.x.ai/v1/chat/completions`
-- **Модель по умолчанию**: `grok-4-fast-reasoning`
-- **Аутентификация**: Bearer token через `GROK_API_KEY`
+- **Endpoint по умолчанию**: `https://api.deepseek.com/v1/chat/completions`
+- **Альтернативный endpoint (Grok)**: `https://api.x.ai/v1/chat/completions`
+- **Модель по умолчанию**: `deepseek-chat`
+- **Аутентификация**: Bearer token через `DEEPSEEK_API_KEY` (или `AI_API_KEY`, `GROK_API_KEY`)
 
 #### Использование:
 
@@ -619,10 +620,12 @@ pip install -r requirements.txt
 Создайте файл `.env` в корне проекта:
 
 ```bash
-GROK_API_KEY=your_actual_grok_api_key_here
+DEEPSEEK_API_KEY=your_actual_deepseek_api_key_here
 ```
 
-Получить API ключ можно на [console.x.ai](https://console.x.ai)
+Получить API ключ:
+- DeepSeek: [platform.deepseek.com](https://platform.deepseek.com/api_keys)
+- Grok: [console.x.ai](https://console.x.ai)
 
 #### 6. Запуск приложения
 
@@ -808,12 +811,14 @@ Genre(
 
 ### Изменение модели
 
-По умолчанию используется `grok-4-fast-reasoning`. Для изменения:
+По умолчанию используется `deepseek-chat`. Для изменения:
 
 1. Откройте `services/grok_client.py`
 2. Измените `DEFAULT_MODEL` или передайте параметр `model` в `call_grok_chat()`
 
-Доступные модели: см. [документацию xAI](https://docs.x.ai/docs/models)
+Доступные модели:
+- DeepSeek: [документация DeepSeek](https://api-docs.deepseek.com/)
+- Grok: [документация xAI](https://docs.x.ai/docs/models)
 
 ### Добавление нового формата трансформации
 
