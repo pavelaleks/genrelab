@@ -27,12 +27,13 @@ from ui_components import (
 
 logging.basicConfig(level=logging.INFO)
 
-# Настройка страницы должна быть первой streamlit-командой
+# Настройка страницы должна быть первой streamlit-командой. Сайдбар скрыт на вкладке «Нарративная песочница».
+_current_tab = st.session_state.get("current_tab", "help")
 st.set_page_config(
     page_title="NARRALAB - Платформа интерактивного сторителлинга",
     page_icon="✨",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed" if _current_tab == "playground" else "expanded"
 )
 
 # Проброс секретов из Streamlit Cloud в окружение (чтобы grok_client видел DEEPSEEK_API_KEY)
@@ -673,6 +674,8 @@ st.markdown("---")
 # Инициализация session state
 init_session_state(
     {
+        "current_tab": "help",
+        "prev_tab": "help",
         "selected_genre_id": None,
         "generated_text": "",
         "analysis_result": None,
@@ -690,13 +693,24 @@ trim_list_state("branching_history", max_items=20)
 # Получаем список жанров
 all_genres = get_all_genres()
 
-# ==================== ВКЛАДКИ ====================
-tab_help, tab1, tab2, tab3 = st.tabs([
-    "📖 Как пользоваться",
-    "🎨 Генератор историй",
-    "📊 Анализ текста",
-    "🌳 Нарративная песочница"
-])
+# ==================== ВКЛАДКИ (кастомные — чтобы скрывать сайдбар на Песочнице) ====================
+_tab_labels = {
+    "help": "📖 Как пользоваться",
+    "generator": "🎨 Генератор историй",
+    "analysis": "📊 Анализ текста",
+    "playground": "🌳 Нарративная песочница",
+}
+_st = st.radio(
+    "Вкладка",
+    options=list(_tab_labels.keys()),
+    format_func=lambda x: _tab_labels[x],
+    key="current_tab",
+    horizontal=True,
+    label_visibility="collapsed",
+)
+if st.session_state.get("prev_tab", _st) != _st:
+    st.session_state.prev_tab = _st
+    st.rerun()
 
 # ==================== САЙДБАР ====================
 with st.sidebar:
@@ -793,7 +807,7 @@ with st.sidebar:
             st.rerun()
 
 # ==================== ВКЛАДКА: КАК ПОЛЬЗОВАТЬСЯ ====================
-with tab_help:
+if st.session_state.current_tab == "help":
     st.header("📖 Инструкция по использованию NARRALAB")
     st.markdown("""
     Ниже описаны **все возможности платформы** по разделам. Рекомендуем начать с настройки API-ключа, затем перейти в «Генератор историй» или «Анализ текста».
@@ -844,7 +858,7 @@ with tab_help:
 
     # 3. Нарративная песочница — три блока на details/summary
     st.subheader("🌳 Нарративная песочница")
-    st.markdown("**Назначение:** три инструмента в одном разделе: конструктор сюжета, ветвящиеся истории, трансформация медиума.")
+    st.markdown("**Назначение:** три инструмента в одном разделе: конструктор сюжета, ветвящиеся истории, трансформация медиума. Жанр и параметры задаются в формах каждого инструмента; панель слева здесь не используется.")
     st.markdown("""
     <details style="margin-bottom:1rem;">
         <summary style="cursor:pointer; font-weight:600;">Подробно: Конструктор сюжета (Plot Builder)</summary>
@@ -874,7 +888,7 @@ with tab_help:
     st.caption("При ошибках API (ключ не найден, 401) откройте блок «Инструкция по настройке API ключа» в сообщении об ошибке или настройте файл `.env` и перезапустите приложение.")
 
 # ==================== ВКЛАДКА 1: ЛАБОРАТОРИЯ ЖАНРОВ ====================
-with tab1:
+elif st.session_state.current_tab == "generator":
     # ==================== ОСНОВНАЯ ОБЛАСТЬ ====================
     
     if not selected_genre:
@@ -1241,7 +1255,7 @@ with tab1:
         st.caption("👆 Нажмите «Сгенерировать текст» выше — появится черновик в выбранном жанре.")
 
 # ==================== ВКЛАДКА 2: АНАЛИЗ МОЕГО ТЕКСТА ====================
-with tab2:
+elif st.session_state.current_tab == "analysis":
     # ==================== ВКЛАДКА "АНАЛИЗ МОЕГО ТЕКСТА" ====================
     st.header("📝 Анализ моего текста")
     st.markdown("""
@@ -1480,7 +1494,7 @@ with tab2:
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==================== ВКЛАДКА 3: НАРРАТИВНАЯ ПЕСОЧНИЦА ====================
-with tab3:
+elif st.session_state.current_tab == "playground":
     st.header("🎭 Нарративная песочница")
     st.markdown("""
     **Нарративная песочница** — экспериментальная площадка для изучения трансмедиальности,
@@ -1489,7 +1503,7 @@ with tab3:
     Исследуйте различные нарративные формы, создавайте ветвящиеся истории и экспериментируйте 
     с трансформацией текста между различными медиаформатами.
     """)
-    
+    st.caption("💡 Настройки в панели слева относятся к разделу «Генератор историй» и «Анализ текста». Здесь у каждого инструмента свои параметры — задавайте жанр и контекст прямо в формах ниже.")
     st.markdown("---")
     
     # Секция 1: Конструктор сюжета (Plot Builder)
@@ -1500,10 +1514,7 @@ with tab3:
     Выберите тип структуры, количество узлов и параметры жанра.
     """)
     
-    # Значения по умолчанию из панели настроек (жанр и сеттинг)
-    _default_genre_index = next((i for i, g in enumerate(all_genres) if g.id == st.session_state.get("selected_genre_id")), 0)
-    _default_era = (st.session_state.params.setting if st.session_state.get("params") else None) or "современность"
-    
+    # Свои настройки песочницы — нейтральные по умолчанию (не из сайдбара)
     with st.form("plot_builder_form"):
         plot_col1, plot_col2 = st.columns(2)
         
@@ -1525,9 +1536,8 @@ with tab3:
             genre_name_plot = st.selectbox(
                 "Жанр:",
                 [genre.name for genre in all_genres],
-                index=_default_genre_index,
                 key="plot_genre",
-                help="Выберите жанр для сюжета (по умолчанию — из панели настроек)"
+                help="Выберите жанр для сюжета"
             )
         
         with plot_col2:
@@ -1539,8 +1549,8 @@ with tab3:
             
             era_plot = st.text_input(
                 "Эпоха:",
-                value=_default_era,
-                help="Эпоха, в которой происходит действие (по умолчанию — из панели настроек)"
+                value="современность",
+                help="Эпоха, в которой происходит действие"
             )
         
         plot_submitted = st.form_submit_button("🔄 Сгенерировать сюжетную структуру")
@@ -1702,17 +1712,12 @@ with tab3:
         else:
             with st.spinner("Генерирую ветвление..."):
                 try:
-                    # Учитываем жанр и параметры из панели настроек
-                    _genre_obj = get_genre_by_id(st.session_state.selected_genre_id) if st.session_state.get("selected_genre_id") else None
-                    _params = st.session_state.get("params")
+                    # Песочница не использует сайдбар — контекст задаётся текстом сцены и выбора
                     branch = request_with_delay(
                         generate_branch,
                         initial_scene=initial_scene,
                         choice=choice,
                         previous_branches=st.session_state.branching_history,
-                        genre=_genre_obj.name if _genre_obj else None,
-                        tonality=_params.tonality if _params else None,
-                        setting=_params.setting if _params else None,
                     )
                     
                     # Добавляем выбор в ветвление для истории
@@ -1851,14 +1856,11 @@ with tab3:
             else:
                 with st.spinner("Преобразую текст..."):
                     try:
-                        _t_genre = get_genre_by_id(st.session_state.selected_genre_id) if st.session_state.get("selected_genre_id") else None
-                        _t_params = st.session_state.get("params")
+                        # Песочница не использует сайдбар — трансформация по тексту и формату
                         transformation = request_with_delay(
                             transform_text,
                             text=transform_text_input,
                             target_format=target_format,
-                            genre=_t_genre.name if _t_genre else None,
-                            tonality=_t_params.tonality if _t_params else None,
                         )
                         
                         st.session_state.transformation_result = transformation
