@@ -933,10 +933,17 @@ with tab1:
 
     st.markdown("---")
 
-    # Блок 3: Генерация текста
-    st.header("✍️ Генерация текста")
-    st.info("💡 Шаг 1/3: Сначала сгенерируйте текст. Затем анализируйте его и при желании используйте режим «Сломать жанр».")
-    
+    # Блок 3: Генерация текста — карточка и одна кнопка
+    st.markdown("""
+    <div class="generation-card" style="background:#fff; border-radius:12px; padding:1.5rem; margin-bottom:1.25rem; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <h2 style="margin:0 0 0.5rem 0; font-size:1.35rem; color:#111827;">✍️ Генерация текста</h2>
+        <p style="margin:0 0 1rem 0; font-size:0.9375rem; color:#6b7280; line-height:1.5;">Сгенерируйте черновик в выбранном жанре — затем его можно отредактировать, проанализировать и при желании «сломать» жанр.</p>
+        <details style="margin-top:0.5rem;">
+            <summary style="cursor:pointer; font-size:0.875rem; color:#6b7280;">Подсказка: шаги работы</summary>
+            <p style="margin:0.5rem 0 0 0; font-size:0.875rem; color:#4b5563;">Шаг 1 — сгенерировать текст. Шаг 2 — проанализировать соответствие жанру. Шаг 3 — при желании использовать режим «Сломать жанр».</p>
+        </details>
+    </div>
+    """, unsafe_allow_html=True)
     if st.button("🔄 Сгенерировать текст", type="primary", use_container_width=True):
         with st.status("Генерация текста...", expanded=True) as status:
             try:
@@ -1231,7 +1238,7 @@ with tab1:
                 st.markdown('</div>', unsafe_allow_html=True)
                 st.info("💡 Этот текст намеренно нарушает жанровые конвенции, но сохраняет связь с исходным жанром.")
     else:
-        st.info("👆 **Шаг 1:** Нажмите «Сгенерировать текст» — появится черновик в выбранном жанре. Затем его можно отредактировать, проанализировать и при желании «сломать» жанр.")
+        st.caption("👆 Нажмите «Сгенерировать текст» выше — появится черновик в выбранном жанре.")
 
 # ==================== ВКЛАДКА 2: АНАЛИЗ МОЕГО ТЕКСТА ====================
 with tab2:
