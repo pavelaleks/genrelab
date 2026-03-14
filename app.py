@@ -476,18 +476,6 @@ div[data-baseweb="notification"][data-kind="error"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
-/* Контейнер кнопки сворачивания сайдбара — скрываем весь видимый текст (на Cloud текст может быть без aria-label) */
-[data-testid="stSidebar"] > div:first-child,
-[data-testid="stSidebar"] > section > div:first-child {
-    font-size: 0 !important;
-    line-height: 0 !important;
-    color: transparent !important;
-}
-[data-testid="stSidebar"] > div:first-child *,
-[data-testid="stSidebar"] > section > div:first-child * {
-    font-size: 0 !important;
-    color: transparent !important;
-}
 /* Блок иконки в заголовке expander — скрываем, чтобы не показывался текст _arrow_right */
 [data-baseweb="accordion-header"] > div:last-of-type,
 [data-baseweb="accordion-header"] > div:last-child,
