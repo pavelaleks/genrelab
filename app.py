@@ -27,13 +27,14 @@ from ui_components import (
 
 logging.basicConfig(level=logging.INFO)
 
-# Настройка страницы должна быть первой streamlit-командой. Сайдбар скрыт на вкладке «Нарративная песочница».
+# Настройка страницы должна быть первой streamlit-командой. Сайдбар скрыт на «Как пользоваться» и «Нарративная песочница».
 _current_tab = st.session_state.get("current_tab", "help")
+_sidebar_hidden_tabs = ("help", "playground")
 st.set_page_config(
     page_title="NARRALAB - Платформа интерактивного сторителлинга",
     page_icon="✨",
     layout="wide",
-    initial_sidebar_state="collapsed" if _current_tab == "playground" else "expanded"
+    initial_sidebar_state="collapsed" if _current_tab in _sidebar_hidden_tabs else "expanded"
 )
 
 # Проброс секретов из Streamlit Cloud в окружение (чтобы grok_client видел DEEPSEEK_API_KEY)
@@ -262,11 +263,19 @@ textarea[disabled], textarea:disabled {
 [data-testid="stSidebar"] > div {
     background-color: #f3f4f6 !important;
 }
-/* Когда на странице есть маркер вкладки Песочница — скрываем сайдбар (set_page_config не всегда срабатывает при смене вкладки) */
-body:has(#playground-tab-active) [data-testid="stSidebar"] {
+/* Скрываем сайдбар на вкладках «Как пользоваться» и «Нарративная песочница» (set_page_config не всегда срабатывает при смене вкладки) */
+body:has(#playground-tab-active) [data-testid="stSidebar"],
+body:has(#help-tab-active) [data-testid="stSidebar"] {
     display: none !important;
 }
 
+/* Блок навигации по разделам — заголовок и кнопки заметны */
+.section-nav-title {
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin-bottom: 0.6rem !important;
+}
 /* Tabs - простые и чистые */
 [data-baseweb="tab-list"] {
     background: transparent !important;
@@ -697,28 +706,37 @@ trim_list_state("branching_history", max_items=20)
 # Получаем список жанров
 all_genres = get_all_genres()
 
-# ==================== ВКЛАДКИ (кастомные — чтобы скрывать сайдбар на Песочнице) ====================
+# ==================== РАЗДЕЛЫ САЙТА (навигация — явные кнопки, чтобы было понятно, куда идти) ====================
 _tab_labels = {
     "help": "📖 Как пользоваться",
     "generator": "🎨 Генератор историй",
     "analysis": "📊 Анализ текста",
     "playground": "🌳 Нарративная песочница",
 }
-_st = st.radio(
-    "Вкладка",
-    options=list(_tab_labels.keys()),
-    format_func=lambda x: _tab_labels[x],
-    key="current_tab",
-    horizontal=True,
-    label_visibility="collapsed",
-)
-if st.session_state.get("prev_tab", _st) != _st:
-    st.session_state.prev_tab = _st
-    st.rerun()
+_current_tab = st.session_state.get("current_tab", "help")
 
-# Маркер для CSS: скрывать сайдбар на вкладке Песочница (set_page_config при смене вкладки не срабатывает)
+st.markdown("")
+st.markdown('<p class="section-nav-title">📍 Разделы</p>', unsafe_allow_html=True)
+nav_cols = st.columns(4)
+for idx, (tab_key, label) in enumerate(_tab_labels.items()):
+    with nav_cols[idx]:
+        is_selected = (_current_tab == tab_key)
+        if st.button(
+            label,
+            key=f"nav_{tab_key}",
+            type="primary" if is_selected else "secondary",
+            use_container_width=True,
+        ) and not is_selected:
+            st.session_state.current_tab = tab_key
+            st.session_state.prev_tab = tab_key
+            st.rerun()
+st.markdown("---")
+
+# Маркеры для CSS: скрывать сайдбар на «Как пользоваться» и «Нарративная песочница»
 if st.session_state.current_tab == "playground":
     st.markdown('<div id="playground-tab-active" style="display:none" aria-hidden="true"></div>', unsafe_allow_html=True)
+if st.session_state.current_tab == "help":
+    st.markdown('<div id="help-tab-active" style="display:none" aria-hidden="true"></div>', unsafe_allow_html=True)
 
 # ==================== САЙДБАР ====================
 with st.sidebar:
