@@ -476,7 +476,15 @@ div[data-baseweb="notification"][data-kind="error"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
-/* Не скрываем по first-child в сайдбаре — на Cloud это скрывает весь контент (Выйти, Настройки, подписи). Оставляем только скрытие по aria-label/title (keyboard) выше. */
+/* Скрываем первый блок сайдбара (надпись keyboard_double у кнопки сворачивания). Кнопка «Выйти» перенесена в основную область справа вверху. */
+[data-testid="stSidebar"] > div:first-child > button,
+[data-testid="stSidebar"] > div:first-child > button *,
+[data-testid="stSidebar"] > div:first-child > *:first-child,
+[data-testid="stSidebar"] > div:first-child > *:first-child * {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+}
 /* Блок иконки в заголовке expander — скрываем, чтобы не показывался текст _arrow_right */
 [data-baseweb="accordion-header"] > div:last-of-type,
 [data-baseweb="accordion-header"] > div:last-child,
@@ -689,13 +697,16 @@ tab_help, tab1, tab2, tab3 = st.tabs([
     "🌳 Narrative Playground"
 ])
 
-# ==================== САЙДБАР ====================
-with st.sidebar:
-    if AUTH_REQUIRED:
-        if st.button("🚪 Выйти", use_container_width=True):
+# Кнопка «Выйти» справа вверху (не в сайдбаре), чтобы в сайдбаре можно было скрыть keyboard_double
+if AUTH_REQUIRED:
+    _col_spacer, _col_exit = st.columns([5, 1])
+    with _col_exit:
+        if st.button("🚪 Выйти", use_container_width=True, key="exit_button_main"):
             st.session_state.authenticated = False
             st.rerun()
-        st.markdown("---")
+
+# ==================== САЙДБАР ====================
+with st.sidebar:
     st.header("⚙️ Настройки")
     
     # Выбор жанра
