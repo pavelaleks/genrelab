@@ -253,10 +253,13 @@ textarea[disabled], textarea:disabled {
     background-color: var(--primary) !important;
 }
 
-/* Sidebar */
+/* Sidebar — слегка серый фон, чтобы отбить от основной страницы */
 [data-testid="stSidebar"] {
-    background-color: var(--bg-card) !important;
+    background-color: #f3f4f6 !important;
     border-right: 1px solid var(--border) !important;
+}
+[data-testid="stSidebar"] > div {
+    background-color: #f3f4f6 !important;
 }
 
 /* Tabs - простые и чистые */
@@ -687,15 +690,6 @@ trim_list_state("branching_history", max_items=20)
 # Получаем список жанров
 all_genres = get_all_genres()
 
-# Кнопка «Выйти» справа вверху (до вкладок), чтобы всегда была вверху страницы
-if AUTH_REQUIRED:
-    _col_spacer, _col_exit = st.columns([5, 1])
-    with _col_exit:
-        if st.button("🚪 Выйти", use_container_width=True, key="exit_button_main"):
-            st.session_state.authenticated = False
-            st.rerun()
-    st.markdown("")  # небольшой отступ под кнопкой
-
 # ==================== ВКЛАДКИ ====================
 tab_help, tab1, tab2, tab3 = st.tabs([
     "📖 Как пользоваться",
@@ -790,6 +784,13 @@ with st.sidebar:
         setting=setting,
         target_length=target_length
     )
+
+    # Кнопка «Выйти» внизу сайдбара
+    if AUTH_REQUIRED:
+        st.markdown("---")
+        if st.button("🚪 Выйти", use_container_width=True, key="exit_button_sidebar"):
+            st.session_state.authenticated = False
+            st.rerun()
 
 # ==================== ВКЛАДКА: КАК ПОЛЬЗОВАТЬСЯ ====================
 with tab_help:
