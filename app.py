@@ -878,7 +878,7 @@ if st.session_state.current_tab == "help":
     <details style="margin-bottom:1rem;">
         <summary style="cursor:pointer; font-weight:600;">Подробно: Ветвящиеся истории (Branching Narrative Lab)</summary>
         <ul style="margin-top:0.5rem; padding-left:1.5rem;">
-            <li>Раскройте блок «Как использовать в writers' room» — там подсказки для сценаристов.</li>
+            <li>Раскройте блок «Как использовать в кабинете писателя» — там подсказки для сценаристов.</li>
             <li>В форме укажите начальную сцену и вариант выбора героя. «Создать ветвление» — ИИ сгенерирует альтернативное продолжение и анализ.</li>
             <li>Все ветвления сохраняются в «История ветвлений» с метками (Сцена 1, 2, …). При двух и более ветвлениях доступен сравнительный анализ. Кнопка «Начать заново» очищает историю.</li>
         </ul>
@@ -1704,7 +1704,7 @@ elif st.session_state.current_tab == "playground":
     
     st.markdown("""
     <details open style="margin-bottom:1rem;">
-        <summary style="cursor:pointer; font-weight:600;">📖 Как использовать в writers' room</summary>
+        <summary style="cursor:pointer; font-weight:600;">📖 Как использовать в кабинете писателя</summary>
         <p style="margin-top:0.5rem;"><strong>Ветвления полезны, когда нужно:</strong></p>
         <ul style="margin:0.25rem 0 0 1.25rem; padding:0;">
             <li>Продумать <strong>точки выбора</strong> героя (моральная дилемма, поворот сюжета, точка невозврата).</li>
