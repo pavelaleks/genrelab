@@ -476,7 +476,13 @@ div[data-baseweb="notification"][data-kind="error"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
-/* Не скрываем кнопки в сайдбаре по first-of-type — иначе скрывается кнопка «Выйти», она выглядит как пустое поле и при клике выходит в логин */
+/* Скрываем только кнопку сворачивания сайдбара (она в первом дочернем блоке), не трогаем «Выйти» */
+[data-testid="stSidebar"] > div:first-child > button,
+[data-testid="stSidebar"] > div:first-child > button * {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+}
 /* Блок иконки в заголовке expander — скрываем, чтобы не показывался текст _arrow_right */
 [data-baseweb="accordion-header"] > div:last-of-type,
 [data-baseweb="accordion-header"] > div:last-child,
