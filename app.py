@@ -889,18 +889,26 @@ with tab1:
     </div>
     """, unsafe_allow_html=True)
     
+    # Сворачиваемые блоки (как везде — details/summary)
+    def _esc(s: str) -> str:
+        return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    features_li = "".join(f"<li>{_esc(f)}</li>" for f in selected_genre.typical_features)
+    schema_li = "".join(f"<li>{_esc(step)}</li>" for step in selected_genre.structural_schema)
     col1, col2 = st.columns(2)
-    
     with col1:
-        st.markdown("**Типичные признаки:**")
-        for feature in selected_genre.typical_features:
-            st.markdown(f"• {feature}")
-    
+        st.markdown(f"""
+        <details style="margin-bottom:1rem;">
+            <summary style="cursor:pointer; font-weight:600;">Типичные признаки</summary>
+            <ul style="margin-top:0.5rem; padding-left:1.5rem;">{features_li}</ul>
+        </details>
+        """, unsafe_allow_html=True)
     with col2:
-        st.markdown("**Структурная схема:**")
-        for i, step in enumerate(selected_genre.structural_schema, 1):
-            st.markdown(f"{i}. {step}")
-    
+        st.markdown(f"""
+        <details style="margin-bottom:1rem;">
+            <summary style="cursor:pointer; font-weight:600;">Структурная схема</summary>
+            <ol style="margin-top:0.5rem; padding-left:1.5rem;">{schema_li}</ol>
+        </details>
+        """, unsafe_allow_html=True)
     st.markdown("---")
     
     # Блок 2: Профиль жанра (радар)
