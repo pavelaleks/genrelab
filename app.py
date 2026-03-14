@@ -476,9 +476,18 @@ div[data-baseweb="notification"][data-kind="error"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
-/* Скрываем только кнопку сворачивания сайдбара (она в первом дочернем блоке), не трогаем «Выйти» */
+/* Скрываем блок с keyboard_double. Вариант A: первый дочерний элемент внутри первого div */
 [data-testid="stSidebar"] > div:first-child > button,
-[data-testid="stSidebar"] > div:first-child > button * {
+[data-testid="stSidebar"] > div:first-child > button *,
+[data-testid="stSidebar"] > div:first-child > *:first-child,
+[data-testid="stSidebar"] > div:first-child > *:first-child * {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+}
+/* Вариант B: если у сайдбара два прямых потомка — первый полоска сворачивания, второй контент; скрываем только первый */
+section[data-testid="stSidebar"] > *:first-child:not(:last-child),
+section[data-testid="stSidebar"] > *:first-child:not(:last-child) * {
     font-size: 0 !important;
     line-height: 0 !important;
     color: transparent !important;
