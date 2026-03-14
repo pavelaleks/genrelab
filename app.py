@@ -459,18 +459,32 @@ div[data-baseweb="notification"][data-kind="error"] span {
     font-size: 0 !important;
     color: transparent !important;
 }
-/* Текст "keyboard_double_a" над сайдбаром (кнопка сворачивания) — скрываем только надпись, кнопка остаётся */
-[aria-label="keyboard_double_a"],
-[title="keyboard_double_a"],
+/* Текст кнопки сворачивания сайдбара (keyboard_double, keyboard_double_a и т.д.) — скрываем надпись */
+[aria-label="keyboard_double_a"], [title="keyboard_double_a"],
+[aria-label="keyboard_double"], [title="keyboard_double"],
 [data-testid="stSidebar"] button[aria-label="keyboard_double_a"],
-[data-testid="stSidebar"] [title="keyboard_double_a"] {
+[data-testid="stSidebar"] [title="keyboard_double_a"],
+[data-testid="stSidebar"] button[aria-label="keyboard_double"],
+[data-testid="stSidebar"] [title="keyboard_double"] {
     font-size: 0 !important;
     line-height: 0 !important;
     overflow: hidden !important;
     color: transparent !important;
 }
-[aria-label="keyboard_double_a"] *,
-[title="keyboard_double_a"] * {
+[aria-label="keyboard_double_a"] *, [title="keyboard_double_a"] *,
+[aria-label="keyboard_double"] *, [title="keyboard_double"] * {
+    font-size: 0 !important;
+    color: transparent !important;
+}
+/* Контейнер кнопки сворачивания сайдбара — скрываем весь видимый текст (на Cloud текст может быть без aria-label) */
+[data-testid="stSidebar"] > div:first-child,
+[data-testid="stSidebar"] > section > div:first-child {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+}
+[data-testid="stSidebar"] > div:first-child *,
+[data-testid="stSidebar"] > section > div:first-child * {
     font-size: 0 !important;
     color: transparent !important;
 }
