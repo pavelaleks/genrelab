@@ -724,17 +724,24 @@ if st.session_state.current_tab == "playground":
 with st.sidebar:
     st.header("⚙️ Настройки")
     
-    # Выбор жанра
-    genre_options = {genre.name: genre.id for genre in all_genres}
+    # Выбор жанра (стабильный порядок опций и key — чтобы выбор сохранялся для всех жанров)
+    genre_names = [g.name for g in all_genres]
+    genre_id_by_name = {g.name: g.id for g in all_genres}
+    default_genre_index = 0
+    if st.session_state.selected_genre_id:
+        for i, g in enumerate(all_genres):
+            if g.id == st.session_state.selected_genre_id:
+                default_genre_index = i
+                break
     selected_genre_name = st.selectbox(
         "🎨 Выберите жанр:",
-        options=list(genre_options.keys()),
-        index=0 if not st.session_state.selected_genre_id else 
-              next((i for i, g in enumerate(all_genres) if g.id == st.session_state.selected_genre_id), 0)
+        options=genre_names,
+        index=default_genre_index,
+        key="sidebar_genre",
     )
-    selected_genre_id = genre_options[selected_genre_name]
+    selected_genre_id = genre_id_by_name.get(selected_genre_name) or all_genres[0].id
     st.session_state.selected_genre_id = selected_genre_id
-    
+
     selected_genre = get_genre_by_id(selected_genre_id)
     
     st.markdown("---")
