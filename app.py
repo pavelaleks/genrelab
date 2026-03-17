@@ -372,25 +372,47 @@ body:has(#theme-dark) .stButton > button span {
     color: #e0f2fe !important;
     -webkit-text-fill-color: #e0f2fe !important;
 }
-/* Подсказки (caption), подписи под полями — всегда светлый текст */
+/* Подсказки (caption) — хорошо видимы: светлый текст и лёгкий фон */
+body:has(#theme-dark) [data-testid="stCaption"],
+body:has(#theme-dark) .stCaption,
 body:has(#theme-dark) [data-testid="stCaption"] *,
 body:has(#theme-dark) .stCaption *,
 body:has(#theme-dark) small,
 body:has(#theme-dark) [class*="caption"] {
-    color: #b0b8c0 !important;
-    -webkit-text-fill-color: #b0b8c0 !important;
+    color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
 }
-/* Tooltip (help=...) — тёмный фон, светлый текст */
+body:has(#theme-dark) [data-testid="stCaption"] {
+    background-color: rgba(31, 41, 55, 0.85) !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 6px !important;
+    border-left: 3px solid #60a5fa !important;
+    margin: 0.25rem 0 0.5rem 0 !important;
+}
+/* Выплывающие подсказки (help=...) — хорошо видны в тёмной теме */
 body:has(#theme-dark) [data-baseweb="tooltip"],
+body:has(#theme-dark) [data-baseweb="tooltip"] > div,
 body:has(#theme-dark) [role="tooltip"],
-body:has(#theme-dark) [data-state="open"][data-baseweb="popover"] {
+body:has(#theme-dark) [data-state="open"][data-baseweb="popover"],
+body:has(#theme-dark) [data-baseweb="popover"] > div,
+body:has(#theme-dark) [class*="tooltip"],
+body:has(#theme-dark) [class*="Tooltip"],
+body:has(#theme-dark) [id*="tooltip"] {
     background-color: #1f2937 !important;
     color: #e5e7eb !important;
-    border: 1px solid #4b5563 !important;
+    border: 1px solid #60a5fa !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    z-index: 9999 !important;
 }
 body:has(#theme-dark) [data-baseweb="tooltip"] *,
-body:has(#theme-dark) [role="tooltip"] * {
+body:has(#theme-dark) [data-baseweb="tooltip"] p,
+body:has(#theme-dark) [role="tooltip"] *,
+body:has(#theme-dark) [data-baseweb="popover"] *,
+body:has(#theme-dark) [class*="tooltip"] * {
     color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
+    background-color: transparent !important;
 }
 /* Заголовки и подзаголовки на всех страницах */
 body:has(#theme-dark) h1, body:has(#theme-dark) h2, body:has(#theme-dark) h3,
