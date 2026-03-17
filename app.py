@@ -97,6 +97,87 @@ st.markdown("""
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+/* Тёмная тема — переопределение переменных и захардкоженных цветов */
+body:has(#theme-dark) {
+    --primary: #60a5fa;
+    --primary-light: #93c5fd;
+    --accent: #3b82f6;
+    --bg-main: #111827;
+    --bg-card: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    --border: #374151;
+    --border-light: #4b5563;
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+body:has(#theme-dark) textarea[disabled],
+body:has(#theme-dark) textarea:disabled {
+    background-color: #374151 !important;
+    border-color: var(--border) !important;
+}
+body:has(#theme-dark) .stButton > button {
+    background-color: #1e3a5f !important;
+    color: #93c5fd !important;
+    border-color: #3b82f6 !important;
+}
+body:has(#theme-dark) .stButton > button:hover {
+    background-color: #1e40af !important;
+}
+body:has(#theme-dark) .stButton > button[kind="secondary"] {
+    background-color: transparent !important;
+    color: #93c5fd !important;
+    border-color: #3b82f6 !important;
+}
+body:has(#theme-dark) .stButton > button[kind="secondary"]:hover {
+    background-color: #374151 !important;
+}
+body:has(#theme-dark) [data-testid="stSidebar"],
+body:has(#theme-dark) [data-testid="stSidebar"] > div {
+    background-color: #1f2937 !important;
+}
+body:has(#theme-dark) .stCodeBlock {
+    background-color: #374151 !important;
+}
+/* Уведомления в тёмной теме */
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"],
+body:has(#theme-dark) .stInfo {
+    background-color: #1e3a5f !important;
+    border-color: #3b82f6 !important;
+    color: #93c5fd !important;
+}
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="success"],
+body:has(#theme-dark) .stSuccess {
+    background-color: #14532d !important;
+    border-color: #22c55e !important;
+    color: #86efac !important;
+}
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="warning"],
+body:has(#theme-dark) .stWarning {
+    background-color: #422006 !important;
+    border-color: #eab308 !important;
+    color: #fde047 !important;
+}
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="error"],
+body:has(#theme-dark) .stError {
+    background-color: #450a0a !important;
+    border-color: #ef4444 !important;
+    color: #fca5a5 !important;
+}
+body:has(#theme-dark) [data-testid="stAppViewContainer"],
+body:has(#theme-dark) [data-testid="stHeader"],
+body:has(#theme-dark) section[data-testid="stSidebar"] {
+    background-color: #111827 !important;
+}
+body:has(#theme-dark) [data-baseweb="select"] > div,
+body:has(#theme-dark) .stTextInput input,
+body:has(#theme-dark) div[data-baseweb="textarea"] textarea {
+    background-color: #1f2937 !important;
+    color: #f9fafb !important;
+    border-color: #374151 !important;
+}
+
 /* Базовые стили */
 * {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
@@ -689,6 +770,7 @@ init_session_state(
     {
         "current_tab": "help",
         "prev_tab": "help",
+        "theme": "light",  # "light" | "dark"
         "selected_genre_id": None,
         "generated_text": "",
         "analysis_result": None,
@@ -717,7 +799,7 @@ _current_tab = st.session_state.get("current_tab", "help")
 
 st.markdown("")
 st.markdown('<p class="section-nav-title">📍 Разделы</p>', unsafe_allow_html=True)
-nav_cols = st.columns(4)
+nav_cols = st.columns([1, 1, 1, 1, 0.45])  # 4 кнопки + переключатель темы
 for idx, (tab_key, label) in enumerate(_tab_labels.items()):
     with nav_cols[idx]:
         is_selected = (_current_tab == tab_key)
@@ -730,13 +812,29 @@ for idx, (tab_key, label) in enumerate(_tab_labels.items()):
             st.session_state.current_tab = tab_key
             st.session_state.prev_tab = tab_key
             st.rerun()
+with nav_cols[4]:
+    st.caption("Тема")
+    _theme = st.session_state.get("theme", "light")
+    theme_choice = st.selectbox(
+        "Тема",
+        options=["light", "dark"],
+        format_func=lambda x: "Светлая" if x == "light" else "Тёмная",
+        index=0 if _theme == "light" else 1,
+        key="theme_switcher",
+        label_visibility="collapsed",
+    )
+    if theme_choice != _theme:
+        st.session_state.theme = theme_choice
+        st.rerun()
 st.markdown("---")
 
-# Маркеры для CSS: скрывать сайдбар на «Как пользоваться» и «Нарративная песочница»
+# Маркеры для CSS: скрывать сайдбар на «Как пользоваться» и «Нарративная песочница»; тёмная тема
 if st.session_state.current_tab == "playground":
     st.markdown('<div id="playground-tab-active" style="display:none" aria-hidden="true"></div>', unsafe_allow_html=True)
 if st.session_state.current_tab == "help":
     st.markdown('<div id="help-tab-active" style="display:none" aria-hidden="true"></div>', unsafe_allow_html=True)
+if st.session_state.get("theme") == "dark":
+    st.markdown('<div id="theme-dark" style="display:none" aria-hidden="true"></div>', unsafe_allow_html=True)
 
 # ==================== САЙДБАР ====================
 with st.sidebar:
