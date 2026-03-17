@@ -126,12 +126,13 @@ body:has(#theme-dark) .stButton > button:hover {
     background-color: #1e40af !important;
 }
 body:has(#theme-dark) .stButton > button[kind="secondary"] {
-    background-color: transparent !important;
-    color: #93c5fd !important;
-    border-color: #3b82f6 !important;
+    background-color: #374151 !important;
+    color: #e0f2fe !important;
+    border-color: #4b5563 !important;
 }
 body:has(#theme-dark) .stButton > button[kind="secondary"]:hover {
-    background-color: #374151 !important;
+    background-color: #4b5563 !important;
+    border-color: #60a5fa !important;
 }
 body:has(#theme-dark) [data-testid="stSidebar"],
 body:has(#theme-dark) [data-testid="stSidebar"] > div {
@@ -168,6 +169,12 @@ body:has(#theme-dark) .stError {
 body:has(#theme-dark) [data-testid="stAppViewContainer"],
 body:has(#theme-dark) [data-testid="stHeader"],
 body:has(#theme-dark) section[data-testid="stSidebar"] {
+    background-color: #111827 !important;
+}
+/* Верхняя панель (тема + Выйти) — тёмный фон, чтобы кнопки не на белом */
+body:has(#theme-dark) [data-testid="stVerticalBlock"] > div:first-child [data-testid="stHorizontalBlock"],
+body:has(#theme-dark) [data-testid="stHorizontalBlock"]:first-of-type,
+body:has(#theme-dark) [data-testid="stHorizontalBlock"]:first-of-type [data-testid="column"] {
     background-color: #111827 !important;
 }
 body:has(#theme-dark) [data-baseweb="select"] > div,
