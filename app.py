@@ -152,7 +152,7 @@ body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"],
 body:has(#theme-dark) .stInfo {
     background-color: #1e3a5f !important;
     border-color: #3b82f6 !important;
-    color: #e0f2fe !important;
+    color: #ffffff !important;
 }
 body:has(#theme-dark) .stInfo *,
 body:has(#theme-dark) .stInfo p,
@@ -162,27 +162,42 @@ body:has(#theme-dark) .stInfo strong,
 body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"] *,
 body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"] p,
 body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"] span {
-    color: #e0f2fe !important;
-    -webkit-text-fill-color: #e0f2fe !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     opacity: 1 !important;
 }
 body:has(#theme-dark) div[data-baseweb="notification"][data-kind="success"],
 body:has(#theme-dark) .stSuccess {
     background-color: #14532d !important;
     border-color: #22c55e !important;
-    color: #86efac !important;
+    color: #ffffff !important;
+}
+body:has(#theme-dark) .stSuccess *,
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="success"] * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 body:has(#theme-dark) div[data-baseweb="notification"][data-kind="warning"],
 body:has(#theme-dark) .stWarning {
     background-color: #422006 !important;
     border-color: #eab308 !important;
-    color: #fde047 !important;
+    color: #ffffff !important;
+}
+body:has(#theme-dark) .stWarning *,
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="warning"] * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 body:has(#theme-dark) div[data-baseweb="notification"][data-kind="error"],
 body:has(#theme-dark) .stError {
     background-color: #450a0a !important;
     border-color: #ef4444 !important;
-    color: #fca5a5 !important;
+    color: #ffffff !important;
+}
+body:has(#theme-dark) .stError *,
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="error"] * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 body:has(#theme-dark) [data-testid="stAppViewContainer"],
 body:has(#theme-dark) [data-testid="stHeader"],
