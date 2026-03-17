@@ -177,6 +177,136 @@ body:has(#theme-dark) div[data-baseweb="textarea"] textarea {
     color: #f9fafb !important;
     border-color: #374151 !important;
 }
+body:has(#theme-dark) [data-baseweb="select"] *,
+body:has(#theme-dark) [data-baseweb="select"] + * {
+    color: #f9fafb !important;
+    -webkit-text-fill-color: #f9fafb !important;
+}
+body:has(#theme-dark) .stTextInput input::placeholder,
+body:has(#theme-dark) div[data-baseweb="textarea"] textarea::placeholder {
+    color: #9ca3af !important;
+}
+body:has(#theme-dark) .stButton > button,
+body:has(#theme-dark) .stButton > button *,
+body:has(#theme-dark) .stButton > button span {
+    color: #93c5fd !important;
+    -webkit-text-fill-color: #93c5fd !important;
+}
+body:has(#theme-dark) .stButton > button[kind="primary"],
+body:has(#theme-dark) .stButton > button[kind="primary"] * {
+    color: #e0f2fe !important;
+    -webkit-text-fill-color: #e0f2fe !important;
+}
+/* Подписи, лейблы, заголовки полей — везде светлый текст */
+body:has(#theme-dark) label,
+body:has(#theme-dark) [data-testid="stSidebar"] label,
+body:has(#theme-dark) .stSlider label,
+body:has(#theme-dark) .stSlider [data-testid="stCaption"],
+body:has(#theme-dark) .stCheckbox label,
+body:has(#theme-dark) .stRadio label,
+body:has(#theme-dark) [data-testid="stCaption"],
+body:has(#theme-dark) .stCaption {
+    color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
+}
+body:has(#theme-dark) .stExpander label,
+body:has(#theme-dark) .stExpander p,
+body:has(#theme-dark) .stExpander div,
+body:has(#theme-dark) .stExpander span,
+body:has(#theme-dark) [data-baseweb="accordion"] * {
+    color: #e5e7eb !important;
+}
+body:has(#theme-dark) div[data-testid="stMarkdown"] p,
+body:has(#theme-dark) div[data-testid="stMarkdown"] p *,
+body:has(#theme-dark) .stMarkdown p,
+body:has(#theme-dark) .stMarkdown p *,
+body:has(#theme-dark) div[data-testid="stMarkdown"] li,
+body:has(#theme-dark) .stMarkdown li,
+body:has(#theme-dark) div[data-testid="stMarkdown"] strong,
+body:has(#theme-dark) .stMarkdown strong,
+body:has(#theme-dark) div[data-testid="stMarkdown"] code,
+body:has(#theme-dark) .stMarkdown code {
+    color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
+}
+body:has(#theme-dark) .stMarkdown code {
+    background-color: #374151 !important;
+    color: #e5e7eb !important;
+}
+body:has(#theme-dark) .stText,
+body:has(#theme-dark) .stMarkdownContainer {
+    color: #e5e7eb !important;
+}
+body:has(#theme-dark) [data-testid="stMetricValue"],
+body:has(#theme-dark) [data-testid="stMetricLabel"] {
+    color: #f9fafb !important;
+}
+body:has(#theme-dark) .stDataFrame,
+body:has(#theme-dark) .stDataFrame * {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #4b5563 !important;
+}
+body:has(#theme-dark) .stProgress > div > div > div {
+    background-color: #60a5fa !important;
+}
+body:has(#theme-dark) .hero-section,
+body:has(#theme-dark) .hero-section * {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #374151 !important;
+}
+/* Уведомления: текст внутри тоже светлый */
+body:has(#theme-dark) div[data-baseweb="notification"] p,
+body:has(#theme-dark) div[data-baseweb="notification"] div,
+body:has(#theme-dark) div[data-baseweb="notification"] span,
+body:has(#theme-dark) .stAlert p, body:has(#theme-dark) .stAlert div, body:has(#theme-dark) .stAlert span,
+body:has(#theme-dark) .stInfo p, body:has(#theme-dark) .stInfo div, body:has(#theme-dark) .stInfo span,
+body:has(#theme-dark) .stSuccess p, body:has(#theme-dark) .stSuccess div, body:has(#theme-dark) .stSuccess span,
+body:has(#theme-dark) .stWarning p, body:has(#theme-dark) .stWarning div, body:has(#theme-dark) .stWarning span,
+body:has(#theme-dark) .stError p, body:has(#theme-dark) .stError div, body:has(#theme-dark) .stError span {
+    color: inherit !important;
+    opacity: 1 !important;
+}
+body:has(#theme-dark) .section-nav-title {
+    color: #e5e7eb !important;
+}
+body:has(#theme-dark) blockquote {
+    color: #d1d5db !important;
+    border-left-color: #60a5fa !important;
+}
+body:has(#theme-dark) .generated-text,
+body:has(#theme-dark) .transformed-text,
+body:has(#theme-dark) .analysis-block,
+body:has(#theme-dark) .story-node-output,
+body:has(#theme-dark) .generated-text textarea,
+body:has(#theme-dark) .transformed-text textarea,
+body:has(#theme-dark) .analysis-block textarea,
+body:has(#theme-dark) .story-node-output textarea {
+    color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
+}
+/* Блоки с инлайн-стилями в контенте */
+body:has(#theme-dark) .genre-description-block,
+body:has(#theme-dark) .genre-description-block p {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #374151 !important;
+}
+body:has(#theme-dark) .generation-card,
+body:has(#theme-dark) .generation-card h2,
+body:has(#theme-dark) .generation-card p,
+body:has(#theme-dark) .generation-card summary,
+body:has(#theme-dark) .generation-card details * {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #374151 !important;
+}
+body:has(#theme-dark) .app-footer,
+body:has(#theme-dark) .app-footer p,
+body:has(#theme-dark) .app-footer * {
+    color: #9ca3af !important;
+}
 
 /* Базовые стили */
 * {
@@ -1032,7 +1162,7 @@ elif st.session_state.current_tab == "generator":
     # Блок 1: Описание жанра
     st.header(f"📖 {selected_genre.name}")
     st.markdown(f"""
-    <div style='background: #ffffff; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;'>
+    <div class="genre-description-block" style='background: #ffffff; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;'>
         <p style='font-size: 1.0625rem; color: #374151; margin: 0; line-height: 1.7;'>{selected_genre.description}</p>
     </div>
     """, unsafe_allow_html=True)
@@ -2089,7 +2219,7 @@ elif st.session_state.current_tab == "playground":
 st.markdown("---")
 st.markdown(
     """
-    <div style='text-align: center; color: #718096; padding: 2rem; margin-top: 2rem;'>
+    <div class="app-footer" style='text-align: center; color: #718096; padding: 2rem; margin-top: 2rem;'>
     <p style='font-size: 1rem; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem;'><strong>✨ NARRALAB</strong></p>
     <p style='font-size: 0.875rem; color: #718096; margin: 0;'>Платформа интерактивного сторителлинга с использованием ИИ</p>
     <p style='font-size: 0.75rem; color: #a0aec0; margin-top: 0.75rem;'>© 2026 NARRALAB. Все права защищены.</p>
