@@ -186,14 +186,10 @@ body:has(#theme-dark) .stTextInput input::placeholder,
 body:has(#theme-dark) div[data-baseweb="textarea"] textarea::placeholder {
     color: #9ca3af !important;
 }
+/* Все кнопки в тёмной теме — светлый читаемый текст (в т.ч. «Выйти») */
 body:has(#theme-dark) .stButton > button,
 body:has(#theme-dark) .stButton > button *,
 body:has(#theme-dark) .stButton > button span {
-    color: #93c5fd !important;
-    -webkit-text-fill-color: #93c5fd !important;
-}
-body:has(#theme-dark) .stButton > button[kind="primary"],
-body:has(#theme-dark) .stButton > button[kind="primary"] * {
     color: #e0f2fe !important;
     -webkit-text-fill-color: #e0f2fe !important;
 }
