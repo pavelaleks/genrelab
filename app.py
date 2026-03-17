@@ -350,6 +350,11 @@ body:has(#help-tab-active) [data-testid="stSidebar"] {
     display: none !important;
 }
 
+/* Верхняя панель: тема и выход справа */
+.top-bar-spacer {
+    margin-bottom: 0.5rem !important;
+}
+
 /* Блок навигации по разделам — заголовок и кнопки заметны */
 .section-nav-title {
     font-size: 1.05rem !important;
@@ -741,6 +746,43 @@ blockquote {
 </style>
 """, unsafe_allow_html=True)
 
+# Инициализация session state (нужна до верхней панели и hero)
+init_session_state(
+    {
+        "current_tab": "help",
+        "prev_tab": "help",
+        "theme": "light",  # "light" | "dark"
+        "selected_genre_id": None,
+        "generated_text": "",
+        "analysis_result": None,
+        "broken_text": "",
+        "user_text_analysis": None,
+        "user_text_input": "",
+        "plot_structure": None,
+        "branching_history": [],
+        "branching_scene": "",
+        "transformation_result": None,
+    }
+)
+trim_list_state("branching_history", max_items=20)
+
+# Верхняя панель: справа — тема (луна/солнце) и кнопка «Выйти»
+_top_bar_cols = st.columns([1, 0.12, 0.08])
+with _top_bar_cols[1]:
+    _theme = st.session_state.get("theme", "light")
+    _is_dark = _theme == "dark"
+    _icon = "☀️" if _is_dark else "🌙"
+    _tooltip = "Включить светлую тему" if _is_dark else "Включить тёмную тему"
+    if st.button(_icon, key="theme_toggle", help=_tooltip, use_container_width=True):
+        st.session_state.theme = "dark" if not _is_dark else "light"
+        st.rerun()
+with _top_bar_cols[2]:
+    if AUTH_REQUIRED:
+        if st.button("Выйти", key="exit_button_top", use_container_width=True, help="Завершить сессию"):
+            st.session_state.authenticated = False
+            st.rerun()
+st.markdown('<div class="top-bar-spacer" aria-hidden="true"></div>', unsafe_allow_html=True)
+
 # Hero — один блок с названием, описанием и лозунгом
 render_hero()
 
@@ -765,26 +807,6 @@ if not api_key:
 
 st.markdown("---")
 
-# Инициализация session state
-init_session_state(
-    {
-        "current_tab": "help",
-        "prev_tab": "help",
-        "theme": "light",  # "light" | "dark"
-        "selected_genre_id": None,
-        "generated_text": "",
-        "analysis_result": None,
-        "broken_text": "",
-        "user_text_analysis": None,
-        "user_text_input": "",
-        "plot_structure": None,
-        "branching_history": [],
-        "branching_scene": "",
-        "transformation_result": None,
-    }
-)
-trim_list_state("branching_history", max_items=20)
-
 # Получаем список жанров
 all_genres = get_all_genres()
 
@@ -799,7 +821,7 @@ _current_tab = st.session_state.get("current_tab", "help")
 
 st.markdown("")
 st.markdown('<p class="section-nav-title">📍 Разделы</p>', unsafe_allow_html=True)
-nav_cols = st.columns([1, 1, 1, 1, 0.45])  # 4 кнопки + переключатель темы
+nav_cols = st.columns(4)
 for idx, (tab_key, label) in enumerate(_tab_labels.items()):
     with nav_cols[idx]:
         is_selected = (_current_tab == tab_key)
@@ -812,20 +834,6 @@ for idx, (tab_key, label) in enumerate(_tab_labels.items()):
             st.session_state.current_tab = tab_key
             st.session_state.prev_tab = tab_key
             st.rerun()
-with nav_cols[4]:
-    st.caption("Тема")
-    _theme = st.session_state.get("theme", "light")
-    theme_choice = st.selectbox(
-        "Тема",
-        options=["light", "dark"],
-        format_func=lambda x: "Светлая" if x == "light" else "Тёмная",
-        index=0 if _theme == "light" else 1,
-        key="theme_switcher",
-        label_visibility="collapsed",
-    )
-    if theme_choice != _theme:
-        st.session_state.theme = theme_choice
-        st.rerun()
 st.markdown("---")
 
 # Маркеры для CSS: скрывать сайдбар на «Как пользоваться» и «Нарративная песочница»; тёмная тема
@@ -930,12 +938,7 @@ with st.sidebar:
         target_length=target_length
     )
 
-    # Кнопка «Выйти» внизу сайдбара
-    if AUTH_REQUIRED:
-        st.markdown("---")
-        if st.button("🚪 Выйти", use_container_width=True, key="exit_button_sidebar"):
-            st.session_state.authenticated = False
-            st.rerun()
+# Кнопка «Выйти» перенесена в верхнюю панель справа
 
 # ==================== ВКЛАДКА: КАК ПОЛЬЗОВАТЬСЯ ====================
 if st.session_state.current_tab == "help":
@@ -950,7 +953,7 @@ if st.session_state.current_tab == "help":
     <details open style="margin-bottom:1rem;">
         <summary style="cursor:pointer; font-weight:600; font-size:1.05rem;">🔑 Настройка перед началом работы</summary>
         <div style="margin-top:0.75rem; padding-left:0.5rem;">
-            <p><strong>1. Вход.</strong> Если приложение защищено (настроен логин/пароль), сначала введите данные, полученные от преподавателя. Кнопка <strong>«Выйти»</strong> в боковой панели завершает сессию.</p>
+            <p><strong>1. Вход.</strong> Если приложение защищено (настроен логин/пароль), сначала введите данные, полученные от преподавателя. Кнопка <strong>«Выйти»</strong> справа вверху страницы завершает сессию.</p>
             <p><strong>2. API-ключ.</strong> Если вы запускаете приложение <strong>локально</strong>, создайте в корне проекта файл <code>.env</code> и добавьте <code>DEEPSEEK_API_KEY=ваш_ключ</code>. Ключ: <a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com</a>. Если приложение размещено на <strong>Streamlit Cloud</strong> и ключ задан в настройках (Secrets), вводить ключ не нужно.</p>
             <p><strong>3. Запуск (локально).</strong> В терминале из папки проекта: <code>streamlit run app.py</code>. Откроется браузер.</p>
             <p><strong>4. Вкладки.</strong> Сверху: Как пользоваться, Генератор историй, Анализ текста, Нарративная песочница.</p>
