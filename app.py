@@ -152,7 +152,19 @@ body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"],
 body:has(#theme-dark) .stInfo {
     background-color: #1e3a5f !important;
     border-color: #3b82f6 !important;
-    color: #93c5fd !important;
+    color: #e0f2fe !important;
+}
+body:has(#theme-dark) .stInfo *,
+body:has(#theme-dark) .stInfo p,
+body:has(#theme-dark) .stInfo div,
+body:has(#theme-dark) .stInfo span,
+body:has(#theme-dark) .stInfo strong,
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"] *,
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"] p,
+body:has(#theme-dark) div[data-baseweb="notification"][data-kind="info"] span {
+    color: #e0f2fe !important;
+    -webkit-text-fill-color: #e0f2fe !important;
+    opacity: 1 !important;
 }
 body:has(#theme-dark) div[data-baseweb="notification"][data-kind="success"],
 body:has(#theme-dark) .stSuccess {
