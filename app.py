@@ -59,6 +59,12 @@ AUTH_REQUIRED = bool(APP_PASSWORD)
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
+# Выход по ссылке ?logout=1 (кнопка «Выйти» рендерится как ссылка для надёжных стилей в тёмной теме)
+if AUTH_REQUIRED and st.session_state.authenticated and st.query_params.get("logout") == "1":
+    st.session_state.authenticated = False
+    st.query_params.clear()
+    st.rerun()
+
 # Экран входа: показываем только форму логина, пока пользователь не введёт верные данные
 if AUTH_REQUIRED and not st.session_state.authenticated:
     st.markdown("<div style='max-width: 420px; margin: 4rem auto; padding: 2rem;'>", unsafe_allow_html=True)
@@ -487,6 +493,35 @@ body:has(#help-tab-active) [data-testid="stSidebar"] {
 .top-bar-spacer {
     margin-bottom: 0.5rem !important;
 }
+/* Кнопка «Выйти» — ссылка с полным контролем стилей (читаема в любой теме) */
+.exit-btn {
+    display: block !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.9375rem !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    border-radius: 6px !important;
+    border: 1px solid #3b82f6 !important;
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+    text-align: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+.exit-btn:hover {
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+}
+body:has(#theme-dark) .exit-btn {
+    background-color: #374151 !important;
+    border-color: #4b5563 !important;
+    color: #e0f2fe !important;
+}
+body:has(#theme-dark) .exit-btn:hover {
+    background-color: #4b5563 !important;
+    color: #f0f9ff !important;
+    border-color: #60a5fa !important;
+}
 
 /* Блок навигации по разделам — заголовок и кнопки заметны */
 .section-nav-title {
@@ -911,9 +946,10 @@ with _top_bar_cols[1]:
         st.rerun()
 with _top_bar_cols[2]:
     if AUTH_REQUIRED:
-        if st.button("Выйти", key="exit_button_top", use_container_width=True, help="Завершить сессию"):
-            st.session_state.authenticated = False
-            st.rerun()
+        st.markdown(
+            '<a href="?logout=1" class="exit-btn" title="Завершить сессию">Выйти</a>',
+            unsafe_allow_html=True,
+        )
 st.markdown('<div class="top-bar-spacer" aria-hidden="true"></div>', unsafe_allow_html=True)
 
 # Hero — один блок с названием, описанием и лозунгом
