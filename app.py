@@ -177,11 +177,24 @@ body:has(#theme-dark) [data-testid="stHeader"],
 body:has(#theme-dark) section[data-testid="stSidebar"] {
     background-color: #111827 !important;
 }
-/* Верхняя панель (тема + Выйти) — тёмный фон, чтобы кнопки не на белом */
+/* Все блоки контента (в т.ч. Нарративная песочница) — без белого фона, чтобы кнопки и текст читались */
+body:has(#theme-dark) [data-testid="stVerticalBlock"],
+body:has(#theme-dark) [data-testid="stHorizontalBlock"],
+body:has(#theme-dark) [data-testid="column"],
+body:has(#theme-dark) [data-testid="stVerticalBlockBorderWrapper"],
+body:has(#theme-dark) section[data-testid="stSidebar"] [data-testid="stVerticalBlock"],
+body:has(#theme-dark) section[data-testid="stSidebar"] [data-testid="column"] {
+    background-color: transparent !important;
+}
+/* Верхняя панель — тёмный фон */
 body:has(#theme-dark) [data-testid="stVerticalBlock"] > div:first-child [data-testid="stHorizontalBlock"],
 body:has(#theme-dark) [data-testid="stHorizontalBlock"]:first-of-type,
 body:has(#theme-dark) [data-testid="stHorizontalBlock"]:first-of-type [data-testid="column"] {
     background-color: #111827 !important;
+}
+/* Обёртка кнопки — без белого фона */
+body:has(#theme-dark) .stButton {
+    background-color: transparent !important;
 }
 body:has(#theme-dark) [data-baseweb="select"] > div,
 body:has(#theme-dark) .stTextInput input,
