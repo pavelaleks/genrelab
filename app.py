@@ -330,6 +330,101 @@ body:has(#theme-dark) .app-footer * {
     color: #9ca3af !important;
 }
 
+/* ========== Аудит тёмной темы: всё контентное пространство тёмное, все кнопки и текст читаемы ========== */
+body:has(#theme-dark) main,
+body:has(#theme-dark) [data-testid="stAppViewContainer"] > div,
+body:has(#theme-dark) [data-testid="stAppViewContainer"] section,
+body:has(#theme-dark) [data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: #111827 !important;
+}
+body:has(#theme-dark) div[data-testid="stVerticalBlock"],
+body:has(#theme-dark) div[data-testid="stHorizontalBlock"],
+body:has(#theme-dark) div[data-testid="column"] {
+    background-color: transparent !important;
+}
+/* Формы и кнопки отправки (Создать ветвление, и др.) */
+body:has(#theme-dark) [data-testid="stForm"],
+body:has(#theme-dark) form,
+body:has(#theme-dark) .stForm {
+    background-color: transparent !important;
+}
+body:has(#theme-dark) [data-testid="stForm"] button,
+body:has(#theme-dark) form button,
+body:has(#theme-dark) .stForm button,
+body:has(#theme-dark) button[type="submit"],
+body:has(#theme-dark) .stButton > button[kind="primary"],
+body:has(#theme-dark) .stButton > button[kind="secondary"],
+body:has(#theme-dark) .stButton > button {
+    background-color: #1e3a5f !important;
+    color: #e0f2fe !important;
+    border-color: #3b82f6 !important;
+    -webkit-text-fill-color: #e0f2fe !important;
+}
+body:has(#theme-dark) .stButton > button[kind="secondary"],
+body:has(#theme-dark) form button[type="submit"]:not([kind="primary"]) {
+    background-color: #374151 !important;
+    border-color: #4b5563 !important;
+}
+body:has(#theme-dark) [data-testid="stForm"] button *,
+body:has(#theme-dark) form button *,
+body:has(#theme-dark) .stButton > button *,
+body:has(#theme-dark) .stButton > button span {
+    color: #e0f2fe !important;
+    -webkit-text-fill-color: #e0f2fe !important;
+}
+/* Подсказки (caption), подписи под полями — всегда светлый текст */
+body:has(#theme-dark) [data-testid="stCaption"] *,
+body:has(#theme-dark) .stCaption *,
+body:has(#theme-dark) small,
+body:has(#theme-dark) [class*="caption"] {
+    color: #b0b8c0 !important;
+    -webkit-text-fill-color: #b0b8c0 !important;
+}
+/* Tooltip (help=...) — тёмный фон, светлый текст */
+body:has(#theme-dark) [data-baseweb="tooltip"],
+body:has(#theme-dark) [role="tooltip"],
+body:has(#theme-dark) [data-state="open"][data-baseweb="popover"] {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border: 1px solid #4b5563 !important;
+}
+body:has(#theme-dark) [data-baseweb="tooltip"] *,
+body:has(#theme-dark) [role="tooltip"] * {
+    color: #e5e7eb !important;
+}
+/* Заголовки и подзаголовки на всех страницах */
+body:has(#theme-dark) h1, body:has(#theme-dark) h2, body:has(#theme-dark) h3,
+body:has(#theme-dark) h4, body:has(#theme-dark) h5, body:has(#theme-dark) h6,
+body:has(#theme-dark) .stSubheader,
+body:has(#theme-dark) [data-testid="stMarkdown"] h1,
+body:has(#theme-dark) [data-testid="stMarkdown"] h2,
+body:has(#theme-dark) [data-testid="stMarkdown"] h3 {
+    color: #f3f4f6 !important;
+    -webkit-text-fill-color: #f3f4f6 !important;
+}
+/* Любой параграф и span в основной области */
+body:has(#theme-dark) main p,
+body:has(#theme-dark) main span,
+body:has(#theme-dark) main div[data-testid="stMarkdown"],
+body:has(#theme-dark) [data-testid="stMarkdown"] {
+    color: #e5e7eb !important;
+}
+body:has(#theme-dark) [data-testid="stMarkdown"] * {
+    color: inherit !important;
+}
+body:has(#theme-dark) [data-testid="stMarkdown"] p,
+body:has(#theme-dark) [data-testid="stMarkdown"] li,
+body:has(#theme-dark) [data-testid="stMarkdown"] span {
+    color: #e5e7eb !important;
+}
+/* Row widgets (кнопки, поля) — обёртка без белого фона */
+body:has(#theme-dark) [class*="row-widget"],
+body:has(#theme-dark) [class*="stButton"],
+body:has(#theme-dark) [class*="stTextInput"],
+body:has(#theme-dark) [class*="stTextArea"] {
+    background-color: transparent !important;
+}
+
 /* Базовые стили */
 * {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
